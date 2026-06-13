@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>世界旅行足跡マップ (193カ国完全対応版)</title>
+  
+  <script src="https://simplemaps.com/static/svg/world/worldmapdata.js"></script>
+  <script src="https://simplemaps.com/static/svg/world/worldmap.js"></script>
+
+  <style>
+    body {
+      margin: 0; padding: 20px; background-color: #f7fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #2d3748; text-align: center;
+    }
+    .container { width: 100%; max-width: 960px; margin: 0 auto; text-align: left; }
+    h1 { text-align: center; font-size: 24px; color: #1a202c; margin-bottom: 20px; }
+    
+    /* ユーザー管理ボックス */
+    .user-box {
+      background: white; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;
+      margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .user-box input { width: 60%; padding: 12px; font-size: 16px; border: 1px solid #cbd5e0; border-radius: 8px; }
+    .user-box button { width: 35%; padding: 12px; font-size: 16px; background: #4299e1; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; float: right; }
+    .status-msg { margin-top: 10px; font-size: 14px; font-weight: bold; color: #e53e3e; }
+
+    /* 凡例 */
+    .legend { display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; font-weight: bold; font-size: 14px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+
+    /* 地図コンテナ（海のパステルブルー） */
+    #map-container {
+      background-color: #ebf8ff; border: 2px solid #bee3f8; border-radius: 16px;
+      padding: 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 25px;
+    }
+
+    /* 登録済み一覧リスト */
+    .list-section { background: white; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .list-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; margin-bottom: 12px; }
+    .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 8px; font-size: 14px; font-weight: bold; display: flex; align-items: center; }
+    .tag-resident { background: #4299e1; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 8px; }
+    .tag-visited { background: #68d391; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 8px; }
+
+    /* モーダルポップアップ */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 999; }
+    .modal-content {
+      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 25px; border-radius: 16px; width: 320px; z-index: 1000; box-sizing: border-box; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+    .modal-content h3 { margin: 0 0 15px 0; font-size: 18px; text-align: center; }
+    .modal-content label { display: block; font-size: 13px; font-weight: bold; margin-top: 12px; color: #4a5568; }
+    .modal-content input[type="text"], .modal-content select { width: 100%; padding: 10px; margin-top: 6px; box-sizing: border-box; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+    .modal-btn { width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+    .btn-primary { background: #38a169; color: white; }
+    .btn-danger { background: #fff; color: #e53e3e; border: 1px solid #fed7d7; }
+    .btn-secondary { background: #edf2f7; color: #4a5568; }
+    
+    /* 地図内の国名ポップアップの調整 */
+    .tt_sm { font-family: sans-serif !important; font-weight: bold !important; border-radius: 6px !important; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🌍 世界旅行足跡マップ</h1>
+  
+  <div class="user-box">
+    <input type="text" id="username-input" placeholder="お名前を入力（例: Aki）">
+    <button id="btn-login">設定ロード</button>
+    <div id="status-display" class="status-msg">⚠️ 最初にスプレッドシート用のお名前を入力して「設定ロード」を押してください</div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span style="display:inline-block;width:14px;height:14px;background:#4299e1;border-radius:3px;"></span> 在住・在住歴</div>
+    <div class="legend-item"><span style="display:inline-block;width:14px;height:14px;background:#68d391;border-radius:3px;"></span> 訪問済み</div>
+    <div class="legend-item"><span style="display:inline-block;width:14px;height:14px;background:#e2e8f0;border:1px solid #a0aec0;border-radius:3px;"></span> 未訪問</div>
+  </div>
+
+  <div id="map-container">
+    <div id="map"></div>
+  </div>
+
+  <div class="list-section">
+    <div class="list-title">登録済みの国・地域一覧</div>
+    <div id="data-list" class="list-grid">
+      <div style="color:#a0aec0; font-size:14px;">データをロードするとここに一覧が表示されます。</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="overlay"></div>
+<div class="modal-content" id="modal">
+  <h3 id="modal-title">国名</h3>
+  
+  <label>区分</label>
+  <select id="status-select">
+    <option value="visited">訪問済みとして登録</option>
+    <option value="resident">在住・在住経験ありとして登録</option>
+  </select>
+  
+  <label>滞在・訪問年（複数ある場合はカンマ区切り）</label>
+  <input type="text" id="years-input" placeholder="例: 2015, 2019, 2026">
+
+  <button class="modal-btn btn-primary" id="btn-save">保存する</button>
+  <button class="modal-btn btn-danger" id="btn-delete">登録を解除する</button>
+  <button class="modal-btn btn-secondary" id="btn-cancel">キャンセル</button>
+</div>
+
+<script>
+  // ⚠️【最重要】ここにステップ1で控えたあなたの「GASウェブアプリURL」を貼り付けてください。
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzPDxEyRCYAZsG4Q9tZncRRgneoLZXONQ_a8zv9Z0e04OZ0STXPaLxxn0cGWO7pmhskYw/exec";
+
+  let currentUsername = "";
+  let userGlobalData = {}; 
+  let selectedId = null;
+
+  // 地図の基本設定
+  simplemaps_worldmap_mapdata.main_settings.background_color = "#ebf8ff"; // 海の色
+  simplemaps_worldmap_mapdata.main_settings.state_description = "クリックして渡航履歴を入力";
+  simplemaps_worldmap_mapdata.main_settings.state_color = "#ffffff"; // 未訪問の陸地の色
+  simplemaps_worldmap_mapdata.main_settings.state_hover_color = "#bee3f8";
+
+  // 地図の初期化実行
+  window.onload = function() {
+    simplemaps_worldmap.load();
+  };
+
+  // 地図上の国がクリックされた時のイベントを割り込み定義
+  simplemaps_worldmap.hooks.click_state = function(id) {
+    if (!currentUsername) {
+      alert("先にお名前を入力して「設定ロード」ボタンを押してください。");
+      return;
+    }
+    const countryName = simplemaps_worldmap_mapdata.state_specific[id]?.name || id;
+    openModal(id, countryName);
+  };
+
+  // ユーザー設定とデータ取得
+  document.getElementById("btn-login").addEventListener("click", function() {
+    const name = document.getElementById("username-input").value.trim();
+    if (!name) {
+      alert("お名前を入力してください");
+      return;
+    }
+    currentUsername = name;
+    document.getElementById("status-display").innerText = "👤 現在のユーザー: " + currentUsername + " さん（スプレッドシート同期中）";
+    document.getElementById("status-display").style.color = "#2b6cb0";
+    fetchUserData();
+  });
+
+  // GASからデータを引っ張ってくる
+  function fetchUserData() {
+    fetch(`${GAS_API_URL}?username=${encodeURIComponent(currentUsername)}`)
+      .then(res => res.json())
+      .then(data => {
+        userGlobalData = data || {};
+        applyDataToMap();
+      })
+      .catch(err => {
+        alert("データの取得に失敗しました。GASのURLかデプロイ設定を確認してください。");
+        console.error(err);
+      });
+  }
+
+  // 取得したデータを地図と下部リストに反映させる
+  function applyDataToMap() {
+    // 一度地図上のすべての国の色をリセット
+    for (let id in simplemaps_worldmap_mapdata.state_specific) {
+      simplemaps_worldmap_mapdata.state_specific[id].color = "#ffffff";
+    }
+
+    const listDiv = document.getElementById("data-list");
+    listDiv.innerHTML = "";
+    let hasData = false;
+
+    // 保存されているデータを地図に塗る
+    for (let id in userGlobalData) {
+      const upId = id.toUpperCase();
+      const status = userGlobalData[id].status;
+      const years = userGlobalData[id].years;
+      
+      if (!simplemaps_worldmap_mapdata.state_specific[upId]) {
+        simplemaps_worldmap_mapdata.state_specific[upId] = {};
+      }
+      
+      // 在住は青、訪問は緑
+      if (status === "resident") {
+        simplemaps_worldmap_mapdata.state_specific[upId].color = "#4299e1";
+      } else {
+        simplemaps_worldmap_mapdata.state_specific[upId].color = "#68d391";
+      }
+
+      // 下部リストに要素を追加
+      hasData = true;
+      const cName = simplemaps_worldmap_mapdata.state_specific[upId]?.name || upId;
+      const item = document.createElement("div");
+      item.className = "list-item";
+      
+      const tag = document.createElement("span");
+      if (status === "resident") {
+        tag.className = "tag-resident"; tag.innerText = "在住";
+      } else {
+        tag.className = "tag-visited"; tag.innerText = "訪問";
+      }
+      
+      const text = document.createElement("span");
+      text.innerText = `${cName} (${years})`;
+      
+      item.appendChild(tag);
+      item.appendChild(text);
+      listDiv.appendChild(item);
+    }
+
+    if (!hasData) {
+      listDiv.innerHTML = '<div style="color:#a0aec0;font-size:14px;">登録された国・地域はありません。地図上の国をタップして登録しましょう！</div>';
+    }
+
+    // 地図を最新のカラー情報で再描画
+    simplemaps_worldmap.refresh();
+  }
+
+  // ポップアップを開く
+  function openModal(id, name) {
+    selectedId = id.toUpperCase();
+    document.getElementById("modal-title").innerText = name;
+    
+    if (userGlobalData[selectedId]) {
+      document.getElementById("status-select").value = userGlobalData[selectedId].status;
+      document.getElementById("years-input").value = userGlobalData[selectedId].years || "";
+      document.getElementById("btn-delete").style.display = "block";
+    } else {
+      document.getElementById("status-select").value = (selectedId === "JP") ? "resident" : "visited";
+      document.getElementById("years-input").value = "";
+      document.getElementById("btn-delete").style.display = "none";
+    }
+    document.getElementById("modal").style.display = "block";
+    document.getElementById("overlay").style.display = "block";
+  }
+
+  // 保存ボタン
+  document.getElementById("btn-save").addEventListener("click", function() {
+    const status = document.getElementById("status-select").value;
+    const years = document.getElementById("years-input").value.trim() || "不明";
+    
+    // 反映待ちの体感をなくすため、先に画面上だけ書き換える（ポジティブUI）
+    userGlobalData[selectedId] = { status: status, years: years };
+    applyDataToMap();
+    closeModal();
+
+    // GASにデータを送信してスプレッドシートに書き込み
+    fetch(GAS_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status: status, years: years })
+    }).then(() => fetchUserData());
+  });
+
+  // 削除ボタン
+  document.getElementById("btn-delete").addEventListener("click", function() {
+    delete userGlobalData[selectedId];
+    applyDataToMap();
+    closeModal();
+
+    fetch(GAS_API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "delete", username: currentUsername, regionId: selectedId })
+    }).then(() => fetchUserData());
+  });
+
+  document.getElementById("btn-cancel").addEventListener("click", closeModal);
+  document.getElementById("overlay").addEventListener("click", closeModal);
+  function closeModal() {
+    document.getElementById("modal").style.display = "none";
+    document.getElementById("overlay").style.display = "none";
+  }
+</script>
+</body>
+</html>
