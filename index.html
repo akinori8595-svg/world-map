@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ</title>
-
+  <title>世界旅行足跡マップ (国旗コレクション版)</title>
   
   <style>
     body {
       margin: 0; padding: 20px; background-color: #f7fafc;
       font-family: sans-serif; color: #2d3748; text-align: center;
     }
-    .container { width: 100%; max-width: 600px; margin: 0 auto; text-align: left; }
+    .container { width: 100%; max-width: 750px; margin: 0 auto; text-align: left; }
     h1 { text-align: center; font-size: 22px; color: #1a202c; margin-bottom: 15px; }
     
-    .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; }
+    .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .user-box input { width: 60%; padding: 10px; font-size: 15px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; }
     .user-box button { width: 35%; padding: 10px; font-size: 15px; background: #4299e1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; float: right; }
     .status-msg { margin-top: 8px; font-size: 13px; font-weight: bold; color: #e53e3e; }
@@ -22,27 +21,40 @@
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
 
-    /* 絶対に消えない・ブロックされない高精度SVG世界地図 */
-    .interactive-svg-map-frame {
-      background-color: #ebf8ff !important; border: 2px solid #bee3f8 !important; border-radius: 12px; padding: 10px; margin-bottom: 20px; display: block !important; visibility: visible !important;
+    /* 【100%確実に世界地図を表示】高画質な世界地図画像を背景に敷くクッション構造 */
+    .world-map-board {
+      width: 100%; height: 400px; 
+      background-image: url('https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=1000&q=80'); /* 宇宙から見た美しい世界地図の背景 */
+      background-size: cover; background-position: center;
+      border: 3px solid #cbd5e0; border-radius: 16px; position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 20px;
     }
-    .world-svg { width: 100%; height: auto; display: block; }
     
-    .country-land { fill: #ffffff; stroke: #a0aec0; stroke-width: 1; cursor: pointer; }
+    /* 地図の上に浮かぶ国旗パネル（国土の代わり） */
+    .country-flag-badge {
+      position: absolute; width: 55px; height: 38px; border: 2px solid #ffffff; border-radius: 4px;
+      cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: transform 0.2s, filter 0.3s;
+      background-size: cover; background-position: center; background-repeat: no-repeat;
+      /* 初期状態：まだ行っていない国は「グレー（モノクロ）」にして隠す */
+      filter: grayscale(100%) opacity(40%);
+    }
+    .country-flag-badge:hover { transform: scale(1.15); z-index: 10; filter: grayscale(30%) opacity(80%); }
     
-    /* 状態変化の色（在住＝青、訪問＝緑） */
-    .country-land.visited { fill: #68d391 !important; stroke: #48bb78; }
-    .country-land.resident { fill: #4299e1 !important; stroke: #3182ce; }
+    /* 【確定】訪問・在住データがある国は、100%本物の綺麗な国旗デザインで塗りつぶす */
+    .country-flag-badge.visited { filter: grayscale(0%) opacity(100%) !important; border-color: #68d391; box-shadow: 0 0 10px #68d391; }
+    .country-flag-badge.resident { filter: grayscale(0%) opacity(100%) !important; border-color: #4299e1; box-shadow: 0 0 10px #4299e1; }
+
+    /* 国旗の下に表示するミニラベル */
+    .flag-label { position: absolute; bottom: -16px; left: -5px; width: 65px; background: rgba(0,0,0,0.7); color: white; font-size: 9px; text-align: center; border-radius: 3px; padding: 1px 0; pointer-events: none; }
 
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; }
     .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
-    .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
-    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
-    .tag-resident { background: #4299e1; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; }
-    .tag-visited { background: #68d391; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; }
+    .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+    .tag-resident { background: #4299e1; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+    .tag-visited { background: #68d391; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
 
     /* ポップアップ */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 999; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
     .modal-content {
       display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border-radius: 12px; width: 280px; z-index: 1000; box-sizing: border-box;
@@ -68,37 +80,21 @@
   </div>
 
   <div class="legend">
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#4299e1;border-radius:2px;"></span> 在住・在住歴</div>
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#68d391;border-radius:2px;"></span> 訪問済み</div>
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:white;border:1px solid #a0aec0;border-radius:2px;"></span> 未訪問</div>
+    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#4299e1;border-radius:2px;"></span> 在住（国旗が点灯）</div>
+    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#68d391;border-radius:2px;"></span> 訪問（国旗が点灯）</div>
+    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#cbd5e0;border-radius:2px;"></span> 未訪問（グレー）</div>
   </div>
 
-  <div class="interactive-svg-map-frame">
-    <svg class="world-svg" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
-      <path d="M120,40 L280,40 L300,100 L200,140 L100,110 Z" class="country-land" id="geo-CA" data-name="カナダ"></path>
-      <text x="180" y="80" font-size="12" font-weight="bold" fill="#4a5568" pointer-events="none">カナダ</text>
-
-      <path d="M120,120 L290,120 L310,180 L140,180 Z" class="country-land" id="geo-US" data-name="アメリカ"></path>
-      <text x="190" y="150" font-size="12" font-weight="bold" fill="#4a5568" pointer-events="none">アメリカ</text>
-
-      <circle cx="250" cy="240" r="12" class="country-land" id="geo-US-HI" data-name="ハワイ"></circle>
-      <text x="235" y="270" font-size="11" font-weight="bold" fill="#4a5568" pointer-events="none">ハワイ</text>
-
-      <path d="M620,130 L760,140 L740,210 L600,200 Z" class="country-land" id="geo-CN" data-name="中国"></path>
-      <text x="660" y="175" font-size="13" font-weight="bold" fill="#4a5568" pointer-events="none">中国</text>
-
-      <path d="M810,130 L840,150 L810,210 L790,160 Z" class="country-land" id="geo-JP" data-name="日本"></path>
-      <text x="825" y="175" font-size="13" font-weight="bold" fill="#3182ce" pointer-events="none">日本</text>
-
-      <circle cx="800" cy="260" r="10" class="country-land" id="geo-MP" data-name="サイパン"></circle>
-      <text x="770" y="285" font-size="10" font-weight="bold" fill="#4a5568" pointer-events="none">サイパン</text>
-
-      <circle cx="820" cy="310" r="10" class="country-land" id="geo-GU" data-name="グアム"></circle>
-      <text x="840" y="315" font-size="10" font-weight="bold" fill="#4a5568" pointer-events="none">グアム</text>
-
-      <path d="M740,350 L880,360 L900,440 L720,430 Z" class="country-land" id="geo-AU" data-name="オーストラリア"></path>
-      <text x="770" y="400" font-size="13" font-weight="bold" fill="#4a5568" pointer-events="none">オーストラリア</text>
-    </svg>
+  <div class="world-map-board">
+    <div class="country-flag-badge" id="flag-JP" data-name="日本" style="top: 30%; left: 78%; background-image: url('https://flagcdn.com/w80/jp.png');"><div class="flag-label">日本</div></div>
+    <div class="country-flag-badge" id="flag-US" data-name="アメリカ" style="top: 32%; left: 18%; background-image: url('https://flagcdn.com/w80/us.png');"><div class="flag-label">アメリカ</div></div>
+    <div class="country-flag-badge" id="flag-CA" data-name="カナダ" style="top: 15%; left: 16%; background-image: url('https://flagcdn.com/w80/ca.png');"><div class="flag-label">カナダ</div></div>
+    <div class="country-flag-badge" id="flag-CN" data-name="中国" style="top: 34%; left: 66%; background-image: url('https://flagcdn.com/w80/cn.png');"><div class="flag-label">中国</div></div>
+    <div class="country-flag-badge" id="flag-AU" data-name="オーストラリア" style="top: 72%; left: 78%; background-image: url('https://flagcdn.com/w80/au.png');"><div class="flag-label">豪州</div></div>
+    
+    <div class="country-flag-badge" id="flag-US-HI" data-name="ハワイ" style="top: 42%; left: 38%; background-image: url('https://flagcdn.com/w80/us-hi.png');"><div class="flag-label">ハワイ</div></div>
+    <div class="country-flag-badge" id="flag-GU" data-name="グアム" style="top: 48%; left: 75%; background-image: url('https://flagcdn.com/w80/gu.png');"><div class="flag-label">グアム</div></div>
+    <div class="country-flag-badge" id="flag-MP" data-name="サイパン" style="top: 42%; left: 73%; background-image: url('https://flagcdn.com/w80/mp.png');"><div class="flag-label">サイパン</div></div>
   </div>
 
   <div class="list-section">
@@ -127,19 +123,21 @@
 
 <script>
   // ⚠️【最重要】ここにGASの「デプロイを管理」からコピーした /exec URLを貼り付けてください。
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzPDxEyRCYAZsG4Q9tZncRRgneoLZXONQ_a8zv9Z0e04OZ0STXPaLxxn0cGWO7pmhskYw/exec";
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzM8ysyvHyLNAddhYvW7IKab0GEJlzn3yoiN6tdmFzcDAFiv4eq2mbKD4tjxAoe0vdEjQ/exec";
 
   let currentUsername = "";
   let userGlobalData = {}; 
   let selectedId = null;
 
-  document.querySelectorAll('.country-land').forEach(el => {
+  // 全国旗バッジにクリックイベントを登録
+  document.querySelectorAll('.country-flag-badge').forEach(el => {
     el.addEventListener('click', function() {
       if (!currentUsername) {
         alert("先にお名前を入力して「設定ロード」ボタンを押してください。");
         return;
       }
-      openModal(this.id.replace('geo-', ''), this.getAttribute('data-name'));
+      const code = this.id.replace('flag-', '');
+      openModal(code, this.getAttribute('data-name'));
     });
   });
 
@@ -147,50 +145,54 @@
     const name = document.getElementById("username-input").value.trim();
     if (!name) { alert("お名前を入力してください"); return; }
     currentUsername = name;
-    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん（スプレッドシート連動中）";
+    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん（同期中）";
     document.getElementById("status-display").style.color = "#2b6cb0";
     fetchUserData();
   });
 
   function fetchUserData() {
-    if(!GAS_API_URL || GAS_API_URL.indexOf('http') !== 0) {
-       alert("GASのURLが正しく設定されていません。コードの最下部を確認してください。");
-       return;
-    }
     var url = GAS_API_URL + "?username=" + encodeURIComponent(currentUsername);
     fetch(url)
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
+      .then(res => res.json())
+      .then(data => {
         userGlobalData = data || {};
         applyDataToUI();
       })
-      .catch(function(err) {
-        alert("通信に失敗しました。GASのURLまたはデプロイ設定を確認してください。");
+      .catch(err => {
+        alert("通信に失敗しました。最下部のURLが正しいか確認してください。");
         console.error(err);
       });
   }
 
   function applyDataToUI() {
-    document.querySelectorAll('.country-land').forEach(el => {
+    // 一度すべての国旗を未訪問（グレー）に戻す
+    document.querySelectorAll('.country-flag-badge').forEach(el => {
       el.classList.remove("visited", "resident");
     });
+    
     const listDiv = document.getElementById("data-list");
     listDiv.innerHTML = "";
     let hasData = false;
+    
     for (let id in userGlobalData) {
       const upId = id.toUpperCase();
       const status = userGlobalData[id].status;
       const years = userGlobalData[id].years;
-      const el = document.getElementById("geo-" + upId);
-      if (el) { el.classList.add(status); }
+      
+      const el = document.getElementById("flag-" + upId);
+      if (el) { 
+        // 訪問データがある国は、モノクロフィルターを解除して国旗を「点灯」させる
+        el.classList.add(status); 
+      }
+      
       hasData = true;
       const cName = el ? el.getAttribute('data-name') : upId;
       const item = document.createElement("div");
       item.className = "list-item";
-      item.innerHTML = '<span class="' + (status === "resident" ? "tag-resident" : "tag-visited") + '">' + (status === "resident" ? "在住" : "訪問") + '</span><span>' + cName + ' (' + years + ')</span>';
+      item.innerHTML = '<span class="' + (status === "resident" ? "tag-resident" : "tag-visited") + '">' + (status === "resident" ? "在住" : "訪問") + '</span><span>' + cName + '</span>';
       listDiv.appendChild(item);
     }
-    if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。地図をタップして登録してください。</div>'; }
+    if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。地図の国旗をタップして登録してください。</div>'; }
   }
 
   function openModal(id, name) {
@@ -218,7 +220,7 @@
     fetch(GAS_API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status: status, years: years })
-    }).then(function() { fetchUserData(); });
+    }).then(() => fetchUserData());
   });
 
   document.getElementById("btn-delete").addEventListener("click", function() {
@@ -228,7 +230,7 @@
     fetch(GAS_API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "delete", username: currentUsername, regionId: selectedId })
-    }).then(function() { fetchUserData(); });
+    }).then(() => fetchUserData());
   });
 
   document.getElementById("btn-cancel").addEventListener("click", closeModal);
