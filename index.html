@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (ISO動的連動・自動ソート版)</title>
+  <title>世界旅行足跡マップ (ISO動的連動・自動ソート最終版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -51,7 +51,7 @@
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
-    /* 🎨 フッター背景をスタイリッシュなディープネイビー（#1e293b）に変更 */
+    /* 🎨 フッター：黒みを減らし、洗練されたディープネイビー（#1e293b）に調整 */
     .footer-flag-container {
       background: #1e293b; border-top: 4px solid #334155; padding: 15px; margin: 30px -20px -20px -20px; text-align: left;
     }
@@ -67,14 +67,14 @@
     .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; transition: transform 0.2s; }
     .flag-card:hover { transform: translateY(-4px); }
     
-    /* 🎨 未訪問の国旗：黒みを無くし、うっすら綺麗に見えるように透過・明るさを調整 */
+    /* 🎨 未訪問の国旗：黒塗りを完全に廃止。1枚目のように美しくうっすらと透き通る透過処理（opacity）に統一 */
     .flag-img {
       width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box;
       background-size: cover; background-position: center; background-repeat: no-repeat;
-      opacity: 0.35; filter: saturate(40%); transition: opacity 0.3s, border-color 0.3s;
+      opacity: 0.35; filter: saturate(50%); transition: opacity 0.3s, border-color 0.3s;
     }
-    .flag-card.visited .flag-img { opacity: 1; filter: none; border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
-    .flag-card.resident .flag-img { opacity: 1; filter: none; border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
+    .flag-card.visited .flag-img { opacity: 1 !important; filter: none !important; border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
+    .flag-card.resident .flag-img { opacity: 1 !important; filter: none !important; border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
     
     .flag-name { color: #94a3b8; font-size: 11px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .flag-card.visited .flag-name { color: #34d399; font-weight: bold; }
@@ -159,6 +159,7 @@
 </div>
 
 <script>
+  // ⚠️ ここにご自身の最新のGAS URLを貼り付けてください
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwrIWf9JJOGuo4ED8PdrTAnDzxSlamtGTF46vr2zX5UTR01l6bvEqxxYiuV3_7OABg2Tg/exec";
 
   let masterCountries = []; 
@@ -168,6 +169,7 @@
   let countryNameMap = {}; 
   let geoJsonMapData = []; 
 
+  // --- D3.js 3D地球儀エンジンの復元 ---
   const svg = d3.select("#world-map-svg");
   const width = document.getElementById("map-container").offsetWidth;
   const height = 500;
@@ -203,9 +205,10 @@
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
   }
 
+  // 地図データのロード
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
-    projection.rotate([-138, -36]); 
+    projection.rotate([-138, -36]); // 日本正面
     drawBaseMap();
   });
 
@@ -285,7 +288,6 @@
       });
   }
 
-  // 🚩 行った国を左側に自動ソートする国旗ビルダー
   function buildFooterFlags() {
     const scrollBox = document.getElementById("flag-scroll-box");
     scrollBox.innerHTML = "";
@@ -305,9 +307,9 @@
       const img = document.createElement("div");
       img.className = "flag-img";
       
-      // ⭕【国旗バグ修正】URL破壊の原因だったsplitを取り除き、ハワイ(US-HI)のみ親国旗(us)を、その他はそのままのIDを充当
-      let flagCode = c.id.toLowerCase();
-      if (flagCode === "us-hi") flagCode = "us";
+      // ⭕【バグ完全根絶】画像配信サーバーの仕様に合わせ、国名IDコードを完全に小文字(.toLowerCase())に統一。ハワイ(US-HI)は米国(us)の画像を充当
+      let flagCode = String(c.id).toLowerCase();
+      if (flagCode === "us-hi") { flagCode = "us"; }
       img.style.backgroundImage = `url('https://flagcdn.com/w80/${flagCode}.png')`;
       
       const name = document.createElement("div");
@@ -336,7 +338,7 @@
       let targetNumericId = "";
       for (let c of masterCountries) {
          if (c.id === upId && c.numericId) { 
-            targetNumericId = c.numericId; 
+            targetNumericId = String(Number(c.numericId)).padStart(3, '0'); 
             break; 
          }
       }
