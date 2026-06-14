@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (国マスター完全動的ソート版)</title>
+  <title>世界旅行足跡マップ (ガイアカラー＆マルチソート完成版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -24,24 +24,29 @@
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
 
+    /* 🎨 地球の周りを美しい空色のグラデーション（空間・大気）に包み込む */
     .map-wrapper {
-      width: 100%; height: 500px; background-color: #f1f5f9; 
-      border: 1px solid #cbd5e0; border-radius: 16px; position: relative;
-      overflow: hidden; cursor: grab; box-shadow: inset 0 4px 12px rgba(0,0,0,0.08);
+      width: 100%; height: 500px; 
+      background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%);
+      border: 1px solid #bae6fd; border-radius: 16px; position: relative;
+      overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 4px 12px rgba(0,0,0,0.05);
     }
     .map-wrapper:active { cursor: grabbing; }
 
-    .ocean-sphere { fill: #ffffff; stroke: #cbd5e0; stroke-width: 1px; }
+    /* 🎨 海の色を透明感あふれる美しい水色（#bae6fd）に染める */
+    .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
 
+    /* 陸地のデフォルトカラー */
     .country-polygon {
-      fill: #f8fafc; stroke: #cbd5e0; stroke-width: 0.8px; transition: fill 0.2s; cursor: pointer;
+      fill: #ffffff; stroke: #94a3b8; stroke-width: 0.5px; transition: fill 0.2s; cursor: pointer;
     }
-    .country-polygon:hover { fill: #f1f5f9; }
+    .country-polygon:hover { fill: #f8fafc; }
     
+    /* 訪問・在住のフラットなスタイリッシュカラー */
     .country-polygon.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 1px; }
     .country-polygon.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 1px; }
 
-    .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(30,41,59,0.8); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
+    .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
 
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 25px; }
     .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
@@ -51,10 +56,18 @@
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
+    /* 🎨 フッター：完璧なディープネイビー */
     .footer-flag-container {
-      background: #1e293b; border-top: 4px solid #334155; padding: 15px; margin: 30px -20px -20px -20px; text-align: left;
+      background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left;
     }
-    .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin-bottom: 10px; padding-left: 5px; }
+    .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; flex-wrap: wrap; gap: 10px; }
+    .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin: 0; }
+    
+    /* 🎛️ ソートトグルボタンのデザイン */
+    .sort-toggle-group { background: #0f172a; padding: 3px; border-radius: 8px; display: inline-flex; border: 1px solid #334155; }
+    .sort-btn { background: transparent; border: none; color: #94a3b8; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .sort-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
     .footer-flag-scroll {
       display: flex; gap: 15px; overflow-x: auto; padding: 5px 5px 15px 5px;
       scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
@@ -66,6 +79,7 @@
     .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; transition: transform 0.2s; }
     .flag-card:hover { transform: translateY(-4px); }
     
+    /* うっすら透き通る未訪問国旗 */
     .flag-img {
       width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box;
       background-size: cover; background-position: center; background-repeat: no-repeat;
@@ -107,7 +121,7 @@
   <div class="legend">
     <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;"></span> 在住・在住歴</div>
     <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#10b981;border-radius:2px;"></span> 訪問済み</div>
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#f8fafc;border:1px solid #cbd5e0;border-radius:2px;"></span> 未訪問（白地図）</div>
+    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:white;border:1px solid #cbd5e0;border-radius:2px;"></span> 未訪問</div>
   </div>
 
   <div class="map-wrapper" id="map-container">
@@ -123,7 +137,13 @@
   </div>
 
   <div class="footer-flag-container">
-    <div class="footer-flag-title">🚩 国旗コレクション（★ロード後、行った国が左に自動ソートされます）</div>
+    <div class="footer-flag-title-row">
+      <p class="footer-flag-title">🚩 国旗コレクション</p>
+      <div class="sort-toggle-group">
+        <button class="sort-btn active" id="sort-btn-fav" onclick="changeSortMode('fav')">★ お気に入り順</button>
+        <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 国名コード順</button>
+      </div>
+    </div>
     <div class="footer-flag-scroll" id="flag-scroll-box">
       <div style="color: #94a3b8; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
     </div>
@@ -157,7 +177,6 @@
 </div>
 
 <script>
-  // ⚠️ ここにご自身の最新のGAS URLを正確に貼り付けてください
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxxcDjHqgJ0uS0uWsnd1XGoS0JuPu-mB0_bQA_aSIG8MGDElBjX3Nxqv9JtLCT9zShJLw/exec";
 
   let masterCountries = []; 
@@ -166,7 +185,9 @@
   let selectedId = null;
   let countryNameMap = {}; 
   let geoJsonMapData = []; 
+  let currentSortMode = 'fav'; // 'fav' または 'alpha'
 
+  // --- D3.js 3D地球儀エンジンの復元 ---
   const svg = d3.select("#world-map-svg");
   const width = document.getElementById("map-container").offsetWidth;
   const height = 500;
@@ -178,6 +199,7 @@
     
   const pathGenerator = d3.geoPath().projection(projection);
   
+  // 美しい海をセット
   svg.append("path")
     .datum({type: "Sphere"})
     .attr("class", "ocean-sphere")
@@ -285,16 +307,48 @@
       });
   }
 
+  // 🎛️ モード切り替え関数
+  function changeSortMode(mode) {
+    currentSortMode = mode;
+    document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav');
+    document.getElementById("sort-btn-alpha").classList.toggle("active", mode === 'alpha');
+    buildFooterFlags();
+  }
+
+  // 🚩【大幅強化】アルファベットソート＆カンマ数による渡航回数ソート完全実装
   function buildFooterFlags() {
     const scrollBox = document.getElementById("flag-scroll-box");
+    if (!scrollBox) return;
     scrollBox.innerHTML = "";
 
     let sortedCountries = [...masterCountries];
-    sortedCountries.sort((a, b) => {
-       let hasA = userGlobalData[a.id] ? 1 : 0;
-       let hasB = userGlobalData[b.id] ? 1 : 0;
-       return hasB - hasA; 
-    });
+
+    if (currentSortMode === 'fav') {
+      // 🎨 お気に入り順：在住歴が最優先(長い順) ＞ 訪問回数が多い順 ＞ 未訪問
+      sortedCountries.sort((a, b) => {
+         let dataA = userGlobalData[a.id];
+         let dataB = userGlobalData[b.id];
+
+         // スコア算出ロジック
+         let scoreA = 0; let scoreB = 0;
+         
+         if (dataA) {
+           // 在住は超高得点＋滞在文字数(年数)でさらに加点
+           if (dataA.status === 'resident') { scoreA = 10000 + String(dataA.years).length; }
+           // 訪問は回数(カンマの数)で加点
+           else if (dataA.status === 'visited') { scoreA = 1000 + (String(dataA.years).split(',').length); }
+         }
+         if (dataB) {
+           if (dataB.status === 'resident') { scoreB = 10000 + String(dataB.years).length; }
+           else if (dataB.status === 'visited') { scoreB = 1000 + (String(dataB.years).split(',').length); }
+         }
+
+         return scoreB - scoreA; // スコアの高い順に左へ
+      });
+    } else {
+      // 🔤 アルファベット順：国名コード(ID)の順序
+      sortedCountries.sort((a, b) => a.id.localeCompare(b.id));
+    }
 
     sortedCountries.forEach(c => {
       const card = document.createElement("div");
@@ -314,6 +368,12 @@
       card.appendChild(img); card.appendChild(name);
       scrollBox.appendChild(card);
     });
+
+    // カラー状態の再反映
+    for (let id in userGlobalData) {
+      const card = document.getElementById("card-" + id.toUpperCase());
+      if (card) { card.classList.add(userGlobalData[id].status); }
+    }
   }
 
   function applyDataToUI() {
@@ -339,7 +399,6 @@
          }
       }
       
-      // ⭕【バグ修正の肝】ハワイ（US-HI）およびAkiさんが指定してくれた「901」が来たら、地図上は親のアメリカ本土「840」をきれいに点灯させる
       if (upId === "US-HI" || targetNumericId === "901") { targetNumericId = "840"; } 
 
       if (targetNumericId) {
