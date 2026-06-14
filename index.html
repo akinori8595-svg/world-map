@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (国マスター完全動的マッピング版)</title>
+  <title>世界旅行足跡マップ (ISO動的連動・自動ソート版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -24,7 +24,6 @@
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
 
-    /* 3D球体白地図コンテナ */
     .map-wrapper {
       width: 100%; height: 500px; background-color: #f1f5f9; 
       border: 1px solid #cbd5e0; border-radius: 16px; position: relative;
@@ -32,16 +31,13 @@
     }
     .map-wrapper:active { cursor: grabbing; }
 
-    /* 地球の海 */
     .ocean-sphere { fill: #ffffff; stroke: #cbd5e0; stroke-width: 1px; }
 
-    /* 美しい国境線と白地図の国土 */
     .country-polygon {
       fill: #f8fafc; stroke: #cbd5e0; stroke-width: 0.8px; transition: fill 0.2s; cursor: pointer;
     }
     .country-polygon:hover { fill: #f1f5f9; }
     
-    /* 国土をスタイリッシュな単色フラットデザインでカラーリング */
     .country-polygon.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 1px; }
     .country-polygon.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 1px; }
 
@@ -55,7 +51,6 @@
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
-    /* フッターの横スクロール国旗エリア */
     .footer-flag-container {
       background: #0f172a; border-top: 4px solid #334155; padding: 15px; margin: 30px -20px -20px -20px; text-align: left;
     }
@@ -81,7 +76,6 @@
     .flag-card.visited .flag-name { color: #34d399; font-weight: bold; }
     .flag-card.resident .flag-name { color: #60a5fa; font-weight: bold; }
 
-    /* ポップアップ */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
     .modal-content {
       display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -127,7 +121,7 @@
   </div>
 
   <div class="footer-flag-container">
-    <div class="footer-flag-title">🚩 国旗コレクション（国マスターから全自動ロードされます）</div>
+    <div class="footer-flag-title">🚩 国旗コレクション（★ロード後、行った国が左に自動ソートされます）</div>
     <div class="footer-flag-scroll" id="flag-scroll-box">
       <div style="color: #64748b; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
     </div>
@@ -161,14 +155,14 @@
 </div>
 
 <script>
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyT6LayaQkzi4PDJX5Dm-W_o7fHaCR4mHvg_8ANE3ue3Vki_xdivsP312RP1bztMxiZ6A/exec";
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyGRBBZdW0EdwJ41NALM4ws6D9IzdukXBZ5AsosYjRU6RwNdBuplodk5leWuzG24kLC2Q/exec";
 
   let masterCountries = []; 
   let currentUsername = "";
   let userGlobalData = {}; 
   let selectedId = null;
   let countryNameMap = {}; 
-  let geoJsonMapData = []; // 地図用ポリゴンの保持キャッシュ
+  let geoJsonMapData = []; 
 
   // --- D3.js 3D地球儀エンジンの復元 ---
   const svg = d3.select("#world-map-svg");
@@ -182,7 +176,6 @@
     
   const pathGenerator = d3.geoPath().projection(projection);
   
-  // 海の描画
   svg.append("path")
     .datum({type: "Sphere"})
     .attr("class", "ocean-sphere")
@@ -190,7 +183,6 @@
 
   const mapGroup = svg.append("g");
 
-  // ドラッグとズーム
   svg.call(d3.drag().on("drag", (event) => {
     const rotate = projection.rotate();
     const k = 75 / projection.scale();
@@ -208,16 +200,13 @@
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
   }
 
-  // 地形地図データの初期取得
+  // 地図データのロード
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
-    
-    // 【初期状態】最初は地図を「日本正面」にクッキリ出現させる
-    projection.rotate([-138, -36]); 
+    projection.rotate([-138, -36]); // 日本正面
     drawBaseMap();
   });
 
-  // 地球儀の国土を再配置・描画する処理
   function drawBaseMap() {
     mapGroup.selectAll(".country-polygon").remove();
 
@@ -227,30 +216,27 @@
       .append("path")
       .attr("class", "country-polygon")
       .attr("id", d => {
-         // D3の各国土オブジェクトが持っている標準の数値IDを文字列化
-         return "poly-raw-" + d.id;
+         // 地図が持つ標準の数値コード（3桁の文字列にパース）
+         let formattedId = String(Number(d.id)).padStart(3, '0');
+         return "poly-raw-id-" + formattedId;
       })
       .attr("d", pathGenerator)
       .on("click", function(event, d) {
-        if (!currentUsername) { alert("先にお名前を入力して「設定ロード」ボタンを押してください。"); return; }
+        if (!currentUsername) { alert("先にお名前を入力して『設定ロード』ボタンを押してください。"); return; }
         
-        // 🚩【完全動的マッピング】特定の国名マッピング配列は不要。
-        // 国マスター側から「この数値ID、またはコードに一致するデータ」を逆引きしてポップアップを展開
-        let matchedId = String(d.id);
-        
-        // もしすでに国マスターが読み込まれていれば、名寄せを逆引きしてあげる
+        let clickedNumericId = String(Number(d.id)).padStart(3, '0');
+        let alphaId = clickedNumericId; // 見つからない場合のフォールバック
+
+        // ⭕ Akiさんが作成してくれたスプレッドシートのC列（numericId）から全自動動的マッチング！
         for (let c of masterCountries) {
-           if (c.numericId === String(d.id) || c.id === String(d.id)) {
-              matchedId = c.id;
+           if (c.numericId === clickedNumericId) {
+              alphaId = c.id;
               break;
            }
         }
         
-        // アメリカ合衆国(数値ID: 840)の標準フォールバック
-        if (String(d.id) === "840") matchedId = "US";
-
-        const name = countryNameMap[matchedId] || "国コード: " + matchedId;
-        openModal(matchedId, name);
+        const name = countryNameMap[alphaId] || "未登録の国 (数値ID: " + alphaId + ")";
+        openModal(alphaId, name);
       });
 
     updateMapDrawing();
@@ -270,34 +256,19 @@
     fetch(url)
       .then(res => res.json())
       .then(data => {
-        // 1. 国マスターシートを完全にそのままロード
         masterCountries = data.countryMaster || [];
         
-        // 標準地図の数値ID（数字）とアルファベット国コードを全自動で結びつける動的インテリジェンス処理
         countryNameMap = {};
         masterCountries.forEach(c => { 
           countryNameMap[c.id] = c.name; 
-          
-          // 標準の数値IDの紐付けを自動補完（日本=392, 米国=840, 加=124, 中=156, 豪=036など）
-          if (c.id === "JP") c.numericId = "392";
-          if (c.id === "US") c.numericId = "840";
-          if (c.id === "CA") c.numericId = "124";
-          if (c.id === "CN") c.numericId = "156";
-          if (c.id === "AU") c.numericId = "036";
-          
-          if (c.numericId) {
-             countryNameMap[c.numericId] = c.name;
-          }
         });
 
-        // 2. 渡航履歴のパース（不純なif文はゼロ）
         userGlobalData = {};
         if (data.userVisits) {
           for (let key in data.userVisits) {
              const cleanKey = key.toUpperCase().trim();
              let visitItem = data.userVisits[key];
              
-             // タイムスタンプゴミ文字の自動クレンジングガード
              if (cleanKey === "US-HI" && (visitItem.years.includes("T") || visitItem.years.length > 10)) {
                 visitItem.years = "2026"; 
              }
@@ -305,7 +276,7 @@
           }
         }
 
-        buildFooterFlags();
+        buildFooterFlags(); // 自動並び替えを適用
         applyDataToUI();
       })
       .catch(err => {
@@ -314,18 +285,26 @@
       });
   }
 
+  // 🚩 行った国を自動で最左にソートする機能
   function buildFooterFlags() {
     const scrollBox = document.getElementById("flag-scroll-box");
     scrollBox.innerHTML = "";
 
-    masterCountries.forEach(c => {
+    let sortedCountries = [...masterCountries];
+    sortedCountries.sort((a, b) => {
+       let hasA = userGlobalData[a.id] ? 1 : 0;
+       let hasB = userGlobalData[b.id] ? 1 : 0;
+       return hasB - hasA; 
+    });
+
+    sortedCountries.forEach(c => {
       const card = document.createElement("div");
       card.className = "flag-card"; card.id = `card-${c.id}`;
       card.onclick = function() { openModal(c.id, c.name); };
       
       const img = document.createElement("div");
       img.className = "flag-img";
-      img.style.backgroundImage = `url('https://flagcdn.com/w80/${c.id.toLowerCase()}.png')`;
+      img.style.backgroundImage = `url('https://flagcdn.com/w80/${c.id.toLowerCase().split('-')[0]}.png')`;
       
       const name = document.createElement("div");
       name.className = "flag-name"; name.innerText = c.name;
@@ -336,7 +315,6 @@
   }
 
   function applyDataToUI() {
-    // 地図のクラス初期化
     mapGroup.selectAll(".country-polygon").classed("visited", false).classed("resident", false);
     document.querySelectorAll('.flag-card').forEach(el => el.classList.remove("visited", "resident"));
     
@@ -351,21 +329,22 @@
       const status = userGlobalData[id].status;
       const years = userGlobalData[id].years;
       
-      // 🗺️ 地図の国土ポリゴンを全自動カラーリング（名寄せオブジェクトを介さず直接ID逆引き）
-      let targetNumericId = upId;
+      // 🗺️ スプレッドシートのC列（numericId）を狙って直接地図を着色！
+      let targetNumericId = "";
       for (let c of masterCountries) {
-         if (c.id === upId && c.numericId) { targetNumericId = c.numericId; break; }
+         if (c.id === upId && c.numericId) { 
+            targetNumericId = c.numericId; 
+            break; 
+         }
       }
       
-      // ハワイ（US-HI）の場合も米国の国土を綺麗に点灯
-      if (upId === "US-HI") targetNumericId = "840";
+      if (upId === "US-HI") targetNumericId = "840"; // ハワイは親のアメリカ本土を点灯
 
-      const poly = d3.select("#poly-raw-" + targetNumericId);
-      if (!poly.empty()) {
-        poly.classed(status, true);
+      if (targetNumericId) {
+        const poly = d3.select("#poly-raw-id-" + targetNumericId);
+        if (!poly.empty()) { poly.classed(status, true); }
       }
       
-      // フッター国旗カードの点灯
       const card = document.getElementById("card-" + upId);
       if (card) { card.classList.add(status); }
       
@@ -375,7 +354,7 @@
       item.className = "list-item";
       
       item.innerHTML = `
-        <div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${upId.toLowerCase()}.png')"></div>
+        <div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${upId.toLowerCase().split('-')[0]}.png')"></div>
         <span class="${status === "resident" ? "tag-resident" : "tag-visited"}">${status === "resident" ? "在住" : "訪問"}</span>
         <span>${cName} (${years})</span>
       `;
@@ -389,14 +368,11 @@
   function openModal(id, name) {
     selectedId = id.toUpperCase();
     
-    // アメリカ合衆国（US、またはハワイ US-HI）が選ばれた時だけ詳細トグルを展開
     const subWrapper = document.getElementById("region-selector-wrapper");
     const subSelect = document.getElementById("region-sub-select");
     
-    if (selectedId === "US" || selectedId === "US-HI" || selectedId === "840") {
+    if (selectedId === "US" || selectedId === "US-HI") {
       subWrapper.style.display = "block";
-      // 初期値補正
-      if (selectedId === "840") selectedId = "US";
       subSelect.value = selectedId;
       updateModalFields(selectedId);
       
@@ -416,7 +392,7 @@
   function updateModalFields(id) {
     const name = countryNameMap[id] || id;
     document.getElementById("modal-title").innerText = name;
-    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase()}.png')`;
+    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().split('-')[0]}.png')`;
     
     if (userGlobalData[id]) {
       document.getElementById("status-select").value = userGlobalData[id].status;
@@ -433,8 +409,11 @@
     const status = document.getElementById("status-select").value;
     const years = document.getElementById("years-input").value.trim() || "不明";
     userGlobalData[selectedId] = { status: status, years: years };
+    
+    buildFooterFlags();
     applyDataToUI();
     closeModal();
+    
     fetch(GAS_API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status: status, years: years })
@@ -443,6 +422,7 @@
 
   document.getElementById("btn-delete").addEventListener("click", function() {
     delete userGlobalData[selectedId];
+    buildFooterFlags();
     applyDataToUI();
     closeModal();
     fetch(GAS_API_URL, {
