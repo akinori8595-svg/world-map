@@ -103,7 +103,7 @@
   </div>
 
   <div class="map-wrapper" id="map-container">
-    <div class="map-guide">鼠标拖动或手指滑动可360度旋转地球儀</div>
+    <div class="map-guide">ドラッグまたはスワイプで地球儀を全方位に回転できます</div>
     <div class="stage-3d" id="drag-stage">
       <div class="globe-sphere" id="globe-body"></div>
     </div>
@@ -141,8 +141,7 @@
 </div>
 
 <script>
-  // ⚠️【最重要】ここにGASの新しい /exec URLを貼り付けてください。
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzaG4TddvOByLnhSe-b2EMjyCd6nt07x0QZBUUJeEz3BGpItYEQt5mh9Nc-yse3uYCu/exec";
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwrDLCIS8xoKXjxgcERi7yNPCd_E6G_ZIOpJl3OwZ01lTx0Vh_aEb-9Xktp4E8QWBdMxw/exec";
 
   let masterCountries = []; 
   let currentUsername = "";
@@ -150,27 +149,25 @@
   let selectedId = null;
   let countryNameMap = {}; 
 
-  // 🌍 世界主要240以上の国・地域の【本物の緯度・経度】マスターデータベース
-  // これをベースに、3D球面数理座標(x, y, z)を完全に自動計算します。
-  const LatLngMaster = {"JP":[36,138],"US":[38,-97],"US-HI":[21,-157],"CA":[60,-95],"CN":[35,105],"AU":[-25,133],"GU":[13,144],"MP":[15,145],"AF":[33,65],"AL":[41,20],"DZ":[28,3],"AD":[42,1.5],"AO":[-12,18],"AG":[17,-61],"AR":[-38,-63],"AM":[40,45],"AT":[47,14],"AZ":[40,47],"BS":[24,-76],"BH":[26,50],"BD":[24,90],"BB":[13,-59],"BY":[53,28],"BE":[50,4.5],"BZ":[17,-88],"BJ":[9,2.2],"BT":[27,90],"BO":[-16,-63],"BA":[44,18],"BW":[-22,24],"BR":[-10,-55],"BN":[4.5,114],"BG":[42,25],"BF":[12,-1.6],"BI":[-3.5,30],"KH":[12.5,105],"CM":[6,12],"CF":[6,20],"TD":[15,19],"CL":[-35,-71],"CO":[4,-72],"KM":[-12,44],"CG":[-1,15],"CD":[-2.5,23],"CR":[10,-84],"CI":[8,-5.5],"HR":[45,15.5],"CU":[21.5,-80],"CY":[35,33],"CZ":[49.7,15.5],"DK":[56,10],"DJ":[11.5,43],"DM":[15,-61],"DO":[19,-70],"EC":[-1.2,-78],"EG":[26,30],"SV":[13.7,-88.8],"GQ":[1.5,10],"ER":[15,39],"EE":[59,26],"ET":[9,40],"FJ":[-18,178],"FI":[64,26],"FR":[46,2],"GA":[-1,11.6],"GM":[13.4,-16.5],"GE":[42,43.5],"DE":[51,9],"GH":[8,-1],"GR":[39,22],"GD":[12,-61.6],"GT":[15.5,-90.2],"GN":[11,-10],"GW":[12,-15],"GY":[5,-59.2],"HT":[19,-72.4],"HN":[15,-86.5],"HU":[47,20],"IS":[65,-18],"IN":[20,77],"ID":[-5,120],"IR":[32,53],"IQ":[33,44],"IE":[53,-8],"IL":[31,35],"IT":[42.8,12.5],"JM":[18,-77.3],"JO":[31,36],"KZ":[48,68],"KE":[1,38],"KI":[-1,173],"KP":[40,127],"KR":[36,128],"KW":[29.3,47.5],"KG":[41,75],"LA":[18,105],"LV":[57,25],"LB":[33.8,35.8],"LS":[-29.6,28.2],"LR":[6.5,-9.3],"LY":[25,17],"LI":[47,9.5],"LT":[56,24],"LU":[49.7,6.1],"MK":[41.6,21.7],"MG":[-20,47],"MW":[-13.5,34],"MY":[2.5,112.5],"MV":[3.2,73],"ML":[17,-4],"MT":[35.9,14.4],"MH":[9,168],"MR":[20,-12],"MU":[-20.2,57.5],"MX":[23,-102],"FM":[6.9,158],"MD":[47,29.5],"MC":[43.7,7.4],"MN":[46,105],"ME":[42.5,19.3],"MA":[32,-5],"MZ":[-18.2,35],"MM":[22,96],"NA":[-22,17],"NR":[-0.5,166.9],"NP":[28,84],"NL":[52.5,5.7],"NZ":[-41,174],"NI":[13,-85],"NE":[16,8],"NG":[10,8],"NO":[62,10],"OM":[21,57],"PK":[30,70],"PW":[7.5,134.5],"PA":[9,-80],"PG":[-6,147],"PY":[-23,-58],"PE":[-10,-75],"PH":[13,122],"PL":[52,20],"PT":[39.5,-8],"QA":[25.5,51.2],"RO":[46,25],"RU":[60,100],"RW":[-2,30],"KN":[17.3,-62.7],"LC":[13.9,-61],"VC":[13.2,-61.2],"WS":[-13.7,-172.1],"SM":[43.9,12.4],"ST":[1,7],"SA":[25,45],"SN":[14,-14],"RS":[44,21],"SC":[-4.6,55.4],"SL":[8.5,-11.5],"SG":[1.3,103.8],"SK":[48.6,19.6],"SI":[46,15],"SB":[-8,159],"SO":[10,49],"ZA":[-29,24],"SS":[7,30],"ES":[40,-4],"LK":[7,81],"SD":[15,30],"SR":[4,-56],"SZ":[-26.5,31.5],"SE":[62,15],"CH":[47,8],"SY":[35,38],"TW":[23.5,121],"TJ":[39,71],"TZ":[-6,35],"TH":[15,100],"TL":[-8.8,125.7],"TG":[8,1.2],"TO":[-21.1,175.2],"TT":[10.5,-61.2],"TN":[34,9],"TR":[39,35],"TM":[40,60],"TV":[-8,178],"UG":[1,32],"UA":[49,32],"AE":[24,54],"GB":[54,-2],"UY":[-33,-56],"UZ":[41.6,63.8],"VU":[-16,167],"VA":[41.9,12.4],"VE":[8,-66],"VN":[16,106],"YE":[15,48],"ZM":[-15,30],"ZW":[-20,30]};
+  // 🌍 世界主要国・地域の正確な【本物の緯度・経度】マスターデータベース
+  const LatLngMaster = {"JP":[36,138],"US":[38,-97],"US-HI":[21,-157],"CA":[60,-95],"CN":[35,105],"AU":[-25,133],"GU":[13,144],"MP":[15,145],"AF":[33,65],"AL":[41,20],"DZ":[28,3],"AD":[42,1.5],"AO":[-12,18],"AG":[17,-61],"AR":[-38,-63],"AM":[40,45],"AT":[47,14],"AZ":[40,47],"BS":[24,-76],"BH":[26,50],"BD":[24,90],"BB":[13,-59],"BY":[53,28],"BE":[50,4.5],"BZ":[17,-88],"BJ":[9,2.2],"BT":[27,90],"BO":[-16,-63],"BA":[44,18],"BW":[-22,24],"BR":[-10,-55],"BN":[4.5,114],"BG":[42,25],"BF":[12,-1.6],"BI":[-3.5,30],"KH":[12.5,105],"CM":[6,12],"CF":[6,20],"TD":[15,19],"CL":[-35,-71],"CO":[4,-72],"KM":[-12,44],"CG":[-1,15],"CD":[-2.5,23],"CR":[10,-84],"CI":[8,-5.5],"HR":[45,15.5],"CU":[21.5,-80],"CY":[35,33],"CZ":[49.7,15.5],"DK":[56,10],"DJ":[11.5,43],"DM":[15,-61],"DO":[19,-70],"EC":[-1.2,-78],"EG":[26,30],"SV":[13.7,-88.8],"GQ":[1.5,10],"ER":[15,39],"EE":[59,26],"ET":[9,40],"FJ":[-18,178],"FI":[64,26],"FR":[46,2],"GA":[-1,11.6],"GM":[13.4,-16.5],"GE":[42,43.5],"DE":[51,9],"GH":[8,-1],"GR":[39,22],"GD":[12,-61.6],"GT":[15.5,-90.2],"GN":[11,-10],"GW":[12,-15],"GY":[5,-59.2],"HT":[19,-72.4],"HN":[15,-86.5],"HU":[47,20],"IS":[65,-18],"IN":[20,77],"ID":[-5,120],"IR":[32,53],"IQ":[33,44],"IE":[53,-8],"IL":[31,35],"IT":[42.8,12.5],"JM":[18,-77.3],"JO":[31,36],"KZ":[48,68],"KE":[1,38],"KI":[-1,173],"KP":[40,127],"KR":[36,128],"KW":[29.3,47.5],"KG":[41,75],"LA":[18,105],"LV":[57,25],"LB":[33.8,35.8],"LS":[-29.6,28.2],"LR":[6.5,-9.3],"LY":[25,17],"LI":[47,9.5],"LT":[56,24],"LU":[49.7,6.1],"MK":[41.6,21.7],"MG":[-20,47],"MW":[-13.5,34],"MY":[2.5,112.5],"MV":[3.2,73],"ML":[17,-4],"MT":[35.9,14.4],"MH":[9,168],"MR":[20,-12],"MU":[-20.2,57.5],"MX":[23,-102],"FM":[6.9,158],"MD":[47,29.5],"MC":[43.7,7.4],"MN":[46,105],"ME":[42.5,19.3],"MA":[32,-5],"MZ":[-18.2,35],"MM":[22,96],"NA":[-22,17],"NR":[-0.5,166.9],"NP":[28,84],"NL":[52.5,5.7],"NZ":[-41,174],"NI":[13,-85],"NE":[16,8],"NG":[10,8],"NO":[62,10],"OM":[21,57],"PK":[30,70],"PW":[7.5,134.5],"PA":[9,-80],"PG":[-6,147],"PY":[-23,-58],"PE":[-10,-75],"PH":[13,122],"PL":[52,20],"PT":[39.5,-8],"QA":[25.5,51.2],"RO":[46,25],"RU":[60,100],"RW":[-2,30],"KN":[17.3,-62.7],"LC":[13.9,-61],"VC":[13.2,-61.2],"WS":[-13.7,-172.1],"SM":[43.9,12.4],"ST":[1,7],"SA":[25,45],"SN":[14,-14],"RS":[44,21],"SC":[-4.6,55.4],"SL":[8.5,-11.5],"SG":[1.3,103.8],"SK":[48.6,19.6],"SI":[46,15],"SB":[-8,159],"SO":[10,49],"ZA":[-29,24],"SS":[7,30],"ES":[40,-4],"LK":[7,81],"SD":[15,30],"SR":[4,-56],"SZ":[-265,31.5],"SE":[62,15],"CH":[47,8],"SY":[35,38],"TW":[23.5,121],"TJ":[39,71],"TZ":[-6,35],"TH":[15,100],"TL":[-8.8,125.7],"TG":[8,1.2],"TO":[-21.1,175.2],"TT":[10.5,-61.2],"TN":[34,9],"TR":[39,35],"TM":[40,60],"TV":[-8,178],"UG":[1,32],"UA":[49,32],"AE":[24,54],"GB":[54,-2],"UY":[-33,-56],"UZ":[41.6,63.8],"VU":[-16,167],"VA":[41.9,12.4],"VE":[8,-66],"VN":[16,106],"YE":[15,48],"ZM":[-15,30],"ZW":[-20,30]};
 
-  let currentRotationX = 15; // 読みやすさ向上のため最初から少し傾けておく
+  let currentRotationX = 15; 
   let currentRotationY = -35;
 
-  // 🌍 203個の国マスター全自動3Dレンダラー（特定の固定配置は一切ありません）
+  // 🌍 国マスターから3D地球儀上にバッジを「100%全自動で動的配置」するクリーンな関数
   function renderGlobeItems() {
     const globe = document.getElementById("globe-body");
     globe.innerHTML = "";
-    const radius = 150; // 地球儀の半径
+    const radius = 150; 
 
     masterCountries.forEach(c => {
       const latlng = LatLngMaster[c.id];
-      if (!latlng) return; // 座標がない国はスキップ
+      if (!latlng) return; 
 
       const lat = latlng[0];
       const lng = latlng[1];
 
-      // 1. 緯度経度から、3D球空間の基本座標（x, y, z）を自動計算
       const radLat = (lat * Math.PI) / 180;
       const radLng = (lng * Math.PI) / 180;
 
@@ -178,37 +175,31 @@
       const baseY = -radius * Math.sin(radLat);
       const amazementZ = radius * Math.cos(radLat) * Math.cos(radLng);
 
-      // 2. 現在の地球儀の回転角(マウスドラッグ量)に合わせて座標をリアルタイム変換
       const radX = (currentRotationX * Math.PI) / 180;
       const radY = (currentRotationY * Math.PI) / 180;
 
-      // Y軸回転
       let x1 = baseX * Math.cos(radY) - amazementZ * Math.sin(radY);
       let z1 = baseX * Math.sin(radY) + amazementZ * Math.cos(radY);
-      // X軸回転
       let y1 = baseY * Math.cos(radX) - z1 * Math.sin(radX);
       let z2 = baseY * Math.sin(radX) + z1 * Math.cos(radX);
 
-      // 地球の裏側（奥側）にある国は非表示にする
-      if (z2 < -20) return;
+      // 裏側のピンは完全に隠す
+      if (z2 < -10) return;
 
       const tag = document.createElement("div");
       tag.className = "globe-country-tag";
       tag.id = `tag-${c.id}`;
       tag.innerText = c.name;
       
-      // 球体コンテナ（320x320）の中心を基準にプロット
       const leftPos = 160 + x1 - 25;
       const topPos = 160 + y1 - 12;
       tag.style.left = `${leftPos}px`;
       tag.style.top = `${topPos}px`;
       
-      // 遠近感をCSSの縮尺（Scale）で完全表現
       const scale = (z2 + 200) / 200;
       tag.style.transform = `scale(${scale})`;
       tag.style.zIndex = Math.round(z2 + 100);
 
-      // データ連動：国旗塗りつぶし
       if (userGlobalData[c.id]) {
         const status = userGlobalData[c.id].status;
         tag.classList.add(status);
@@ -220,7 +211,7 @@
     });
   }
 
-  // ドラッグ回転イベント
+  // ドラッグ操作
   const stage = document.getElementById("drag-stage");
   let isDragging = false;
   let previousMousePosition = { x: 0, y: 0 };
@@ -236,6 +227,7 @@
     previousMousePosition = { x: e.clientX, y: e.clientY };
   });
 
+  // タッチ操作
   stage.addEventListener("touchstart", (e) => { isDragging = true; previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }; });
   window.addEventListener("touchend", () => { isDragging = false; });
   stage.addEventListener("touchmove", (e) => {
@@ -247,12 +239,12 @@
     previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   });
 
-  // 設定ロードボタン
+  // 設定ロード
   document.getElementById("btn-login").addEventListener("click", function() {
     const name = document.getElementById("username-input").value.trim();
     if (!name) { alert("お名前を入力してください"); return; }
     currentUsername = name;
-    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん（全データ同期完了）";
+    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん";
     document.getElementById("status-display").style.color = "#2b6cb0";
     fetchUserData();
   });
@@ -262,22 +254,17 @@
     fetch(url)
       .then(res => res.json())
       .then(data => {
-        // 1. スプレッドシート側の「国マスター」配列を受け取る
+        // 1. スプレッドシートの「国マスター」データを直に受け取る
         masterCountries = data.countryMaster || [];
         
         countryNameMap = {};
         masterCountries.forEach(c => { countryNameMap[c.id] = c.name; });
 
-        // 2. ユーザー渡航履歴をパース
+        // 2. ユーザーの渡航データを素直にパース（ハードコード名寄せを完全撤廃）
         userGlobalData = {};
         if (data.userVisits) {
           for (let key in data.userVisits) {
-             let cleanKey = key.toUpperCase().trim();
-             if (cleanKey === "392" || cleanKey === "日本") cleanKey = "JP";
-             if (cleanKey === "840" || cleanKey === "アメリカ") cleanKey = "US";
-             if (cleanKey === "124" || cleanKey === "カナダ") cleanKey = "CA";
-             if (cleanKey === "156" || cleanKey === "中国") cleanKey = "CN";
-             if (cleanKey === "036" || cleanKey === "オーストラリア") cleanKey = "AU";
+             const cleanKey = key.toUpperCase().trim();
              userGlobalData[cleanKey] = data.userVisits[key];
           }
         }
@@ -286,7 +273,7 @@
         applyDataToUI();
       })
       .catch(err => {
-         alert("データの同期に失敗しました。GASのURLまたはデプロイの権限設定が『全員』になっているか再度ご確認ください。");
+         alert("同期に失敗しました。GASのURLまたは公開設定をご確認ください。");
          console.error(err);
       });
   }
@@ -340,9 +327,7 @@
     if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。地球または下の国旗をタップして登録してください。</div>'; }
   }
 
-  // 初期プレビュー用（ロード前にデフォルトで幾つかの主要国を仮マッピングさせておく親切構造）
-  masterCountries = [{id:"JP",name:"日本"},{id:"US",name:"アメリカ"},{id:"US-HI",name:"ハワイ"},{id:"CA",name:"カナダ"},{id:"CN",name:"中国"},{id:"AU",name:"オーストラリア"},{id:"GU",name:"グアム"},{id:"MP",name:"サイパン"}];
-  masterCountries.forEach(c => { countryNameMap[c.id] = c.name; });
+  // 初期プレビュー：完全に真っ白な地球儀の球体だけを出現させるクリーン設計
   renderGlobeItems();
 
   function openModal(id, name) {
@@ -354,7 +339,7 @@
       document.getElementById("years-input").value = userGlobalData[selectedId].years || "";
       document.getElementById("btn-delete").style.display = "block";
     } else {
-      document.getElementById("status-select").value = (selectedId === "JP") ? "resident" : "visited";
+      document.getElementById("status-select").value = "visited";
       document.getElementById("years-input").value = "";
       document.getElementById("btn-delete").style.display = "none";
     }
