@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (ガイアカラー＆マルチソート完成版)</title>
+  <title>世界旅行足跡マップ (極小国スマートピン搭載版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -24,7 +24,6 @@
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
 
-    /* 🎨 地球の周りを美しい空色のグラデーション（空間・大気）に包み込む */
     .map-wrapper {
       width: 100%; height: 500px; 
       background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%);
@@ -33,18 +32,23 @@
     }
     .map-wrapper:active { cursor: grabbing; }
 
-    /* 🎨 海の色を透明感あふれる美しい水色（#bae6fd）に染める */
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
 
-    /* 陸地のデフォルトカラー */
     .country-polygon {
       fill: #ffffff; stroke: #94a3b8; stroke-width: 0.5px; transition: fill 0.2s; cursor: pointer;
     }
     .country-polygon:hover { fill: #f8fafc; }
     
-    /* 訪問・在住のフラットなスタイリッシュカラー */
     .country-polygon.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 1px; }
     .country-polygon.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 1px; }
+
+    /* 📍 極小国ピンのカスタムスタイル */
+    .small-country-pin {
+      fill: #ffffff; stroke: #475569; stroke-width: 1.5px; cursor: pointer; transition: all 0.2s;
+    }
+    .small-country-pin:hover { fill: #f1f5f9; stroke-width: 2.5px; }
+    .small-country-pin.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 2px; }
+    .small-country-pin.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 2px; }
 
     .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
 
@@ -56,14 +60,12 @@
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
-    /* 🎨 フッター：完璧なディープネイビー */
     .footer-flag-container {
       background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left;
     }
     .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; flex-wrap: wrap; gap: 10px; }
     .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin: 0; }
     
-    /* 🎛️ ソートトグルボタンのデザイン */
     .sort-toggle-group { background: #0f172a; padding: 3px; border-radius: 8px; display: inline-flex; border: 1px solid #334155; }
     .sort-btn { background: transparent; border: none; color: #94a3b8; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
     .sort-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -79,7 +81,6 @@
     .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; transition: transform 0.2s; }
     .flag-card:hover { transform: translateY(-4px); }
     
-    /* うっすら透き通る未訪問国旗 */
     .flag-img {
       width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box;
       background-size: cover; background-position: center; background-repeat: no-repeat;
@@ -177,6 +178,7 @@
 </div>
 
 <script>
+  // ⚠️【最重要】ここにご自身の最新のGAS URLを正確に貼り付けてください
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxxcDjHqgJ0uS0uWsnd1XGoS0JuPu-mB0_bQA_aSIG8MGDElBjX3Nxqv9JtLCT9zShJLw/exec";
 
   let masterCountries = []; 
@@ -185,9 +187,20 @@
   let selectedId = null;
   let countryNameMap = {}; 
   let geoJsonMapData = []; 
-  let currentSortMode = 'fav'; // 'fav' または 'alpha'
+  let currentSortMode = 'fav'; 
 
-  // --- D3.js 3D地球儀エンジンの復元 ---
+  // 📍 極小国・都市国家の緯度経度データマッピング（国マスターのIDと完全同期）
+  const smallCountries = [
+    { id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 },
+    { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 },
+    { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 },
+    { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 },
+    { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 },
+    { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 },
+    { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 },
+    { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 }
+  ];
+
   const svg = d3.select("#world-map-svg");
   const width = document.getElementById("map-container").offsetWidth;
   const height = 500;
@@ -199,13 +212,13 @@
     
   const pathGenerator = d3.geoPath().projection(projection);
   
-  // 美しい海をセット
   svg.append("path")
     .datum({type: "Sphere"})
     .attr("class", "ocean-sphere")
     .attr("d", pathGenerator);
 
   const mapGroup = svg.append("g");
+  const pinGroup = svg.append("g"); // ピン専用のレイヤーグループ
 
   svg.call(d3.drag().on("drag", (event) => {
     const rotate = projection.rotate();
@@ -219,16 +232,18 @@
     updateMapDrawing();
   }));
 
+  // 地図とピンの同時再描画ロジック
   function updateMapDrawing() {
     svg.select(".ocean-sphere").attr("d", pathGenerator);
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
+    drawSmallCountryPins(); // 地球儀の回転に合わせてピンの位置も再計算
   }
 
-  // 地図データのロード
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
     projection.rotate([-138, -36]); // 日本正面
     drawBaseMap();
+    drawSmallCountryPins();
   });
 
   function drawBaseMap() {
@@ -264,6 +279,42 @@
     updateMapDrawing();
   }
 
+  // 📍 極小国専用のインタラクティブ・ピンを描画する関数
+  function drawSmallCountryPins() {
+    pinGroup.selectAll(".small-country-pin").remove();
+
+    pinGroup.selectAll("circle")
+      .data(smallCountries)
+      .enter()
+      .append("circle")
+      .attr("class", d => {
+         let statusClass = "";
+         if (userGlobalData[d.id]) { statusClass = " " + userGlobalData[d.id].status; }
+         return "small-country-pin" + statusClass;
+      })
+      .attr("id", d => "pin-id-" + d.id)
+      .attr("cx", d => {
+         const coords = projection([d.lng, d.lat]);
+         return coords ? coords[0] : 0;
+      })
+      .attr("cy", d => {
+         const coords = projection([d.lng, d.lat]);
+         return coords ? coords[1] : 0;
+      })
+      .attr("r", 5) // クリックしやすい綺麗なドットサイズ
+      // 💡 地球儀の裏側に回ったピンを隠す（クリッピング処理）
+      .style("display", d => {
+         const gdistance = d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]);
+         return gdistance > Math.PI / 2 ? "none" : "inline";
+      })
+      .on("click", function(event, d) {
+         event.stopPropagation(); // 下層にある大海原や別の大陸のクリック発火を防ぐ
+         if (!currentUsername) { alert("先にお名前を入力して『設定ロード』ボタンを押してください。"); return; }
+         const name = countryNameMap[d.id] || d.name;
+         openModal(d.id, name);
+      });
+  }
+
   document.getElementById("btn-login").addEventListener("click", function() {
     const name = document.getElementById("username-input").value.trim();
     if (!name) { alert("お名前を入力してください"); return; }
@@ -290,7 +341,6 @@
           for (let key in data.userVisits) {
              const cleanKey = key.toUpperCase().trim();
              let visitItem = data.userVisits[key];
-             
              if (cleanKey === "US-HI" && (visitItem.years.includes("T") || visitItem.years.length > 10)) {
                 visitItem.years = "2026"; 
              }
@@ -307,7 +357,6 @@
       });
   }
 
-  // 🎛️ モード切り替え関数
   function changeSortMode(mode) {
     currentSortMode = mode;
     document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav');
@@ -315,7 +364,6 @@
     buildFooterFlags();
   }
 
-  // 🚩【大幅強化】アルファベットソート＆カンマ数による渡航回数ソート完全実装
   function buildFooterFlags() {
     const scrollBox = document.getElementById("flag-scroll-box");
     if (!scrollBox) return;
@@ -324,29 +372,22 @@
     let sortedCountries = [...masterCountries];
 
     if (currentSortMode === 'fav') {
-      // 🎨 お気に入り順：在住歴が最優先(長い順) ＞ 訪問回数が多い順 ＞ 未訪問
       sortedCountries.sort((a, b) => {
          let dataA = userGlobalData[a.id];
          let dataB = userGlobalData[b.id];
-
-         // スコア算出ロジック
          let scoreA = 0; let scoreB = 0;
          
          if (dataA) {
-           // 在住は超高得点＋滞在文字数(年数)でさらに加点
            if (dataA.status === 'resident') { scoreA = 10000 + String(dataA.years).length; }
-           // 訪問は回数(カンマの数)で加点
            else if (dataA.status === 'visited') { scoreA = 1000 + (String(dataA.years).split(',').length); }
          }
          if (dataB) {
            if (dataB.status === 'resident') { scoreB = 10000 + String(dataB.years).length; }
            else if (dataB.status === 'visited') { scoreB = 1000 + (String(dataB.years).split(',').length); }
          }
-
-         return scoreB - scoreA; // スコアの高い順に左へ
+         return scoreB - scoreA;
       });
     } else {
-      // 🔤 アルファベット順：国名コード(ID)の順序
       sortedCountries.sort((a, b) => a.id.localeCompare(b.id));
     }
 
@@ -369,7 +410,6 @@
       scrollBox.appendChild(card);
     });
 
-    // カラー状態の再反映
     for (let id in userGlobalData) {
       const card = document.getElementById("card-" + id.toUpperCase());
       if (card) { card.classList.add(userGlobalData[id].status); }
@@ -425,7 +465,7 @@
       listDiv.appendChild(item);
     }
     
-    updateMapDrawing();
+    updateMapDrawing(); // ピンの色も同期させるためここで呼び出す
     if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。地球または下の国旗をタップして登録してください。</div>'; }
   }
 
