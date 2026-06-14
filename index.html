@@ -51,8 +51,9 @@
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
+    /* 🎨 フッター背景をスタイリッシュなディープネイビー（#1e293b）に変更 */
     .footer-flag-container {
-      background: #0f172a; border-top: 4px solid #334155; padding: 15px; margin: 30px -20px -20px -20px; text-align: left;
+      background: #1e293b; border-top: 4px solid #334155; padding: 15px; margin: 30px -20px -20px -20px; text-align: left;
     }
     .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin-bottom: 10px; padding-left: 5px; }
     .footer-flag-scroll {
@@ -60,18 +61,21 @@
       scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
     }
     .footer-flag-scroll::-webkit-scrollbar { height: 8px; }
-    .footer-flag-scroll::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+    .footer-flag-scroll::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
     .footer-flag-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
 
     .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; transition: transform 0.2s; }
     .flag-card:hover { transform: translateY(-4px); }
+    
+    /* 🎨 未訪問の国旗：黒みを無くし、うっすら綺麗に見えるように透過・明るさを調整 */
     .flag-img {
-      width: 100%; height: 48px; border: 2px solid #334155; border-radius: 6px; box-sizing: border-box;
+      width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box;
       background-size: cover; background-position: center; background-repeat: no-repeat;
-      filter: grayscale(100%) opacity(30%); transition: filter 0.3s, border-color 0.3s;
+      opacity: 0.35; filter: saturate(40%); transition: opacity 0.3s, border-color 0.3s;
     }
-    .flag-card.visited .flag-img { filter: grayscale(0%) opacity(100%); border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
-    .flag-card.resident .flag-img { filter: grayscale(0%) opacity(100%); border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
+    .flag-card.visited .flag-img { opacity: 1; filter: none; border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
+    .flag-card.resident .flag-img { opacity: 1; filter: none; border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
+    
     .flag-name { color: #94a3b8; font-size: 11px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .flag-card.visited .flag-name { color: #34d399; font-weight: bold; }
     .flag-card.resident .flag-name { color: #60a5fa; font-weight: bold; }
@@ -123,7 +127,7 @@
   <div class="footer-flag-container">
     <div class="footer-flag-title">🚩 国旗コレクション（★ロード後、行った国が左に自動ソートされます）</div>
     <div class="footer-flag-scroll" id="flag-scroll-box">
-      <div style="color: #64748b; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
+      <div style="color: #94a3b8; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
     </div>
   </div>
 
@@ -164,7 +168,6 @@
   let countryNameMap = {}; 
   let geoJsonMapData = []; 
 
-  // --- D3.js 3D地球儀エンジンの復元 ---
   const svg = d3.select("#world-map-svg");
   const width = document.getElementById("map-container").offsetWidth;
   const height = 500;
@@ -200,10 +203,9 @@
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
   }
 
-  // 地図データのロード
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
-    projection.rotate([-138, -36]); // 日本正面
+    projection.rotate([-138, -36]); 
     drawBaseMap();
   });
 
@@ -216,7 +218,6 @@
       .append("path")
       .attr("class", "country-polygon")
       .attr("id", d => {
-         // 地図が持つ標準の数値コード（3桁の文字列にパース）
          let formattedId = String(Number(d.id)).padStart(3, '0');
          return "poly-raw-id-" + formattedId;
       })
@@ -225,9 +226,8 @@
         if (!currentUsername) { alert("先にお名前を入力して『設定ロード』ボタンを押してください。"); return; }
         
         let clickedNumericId = String(Number(d.id)).padStart(3, '0');
-        let alphaId = clickedNumericId; // 見つからない場合のフォールバック
+        let alphaId = clickedNumericId; 
 
-        // ⭕ Akiさんが作成してくれたスプレッドシートのC列（numericId）から全自動動的マッチング！
         for (let c of masterCountries) {
            if (c.numericId === clickedNumericId) {
               alphaId = c.id;
@@ -276,7 +276,7 @@
           }
         }
 
-        buildFooterFlags(); // 自動並び替えを適用
+        buildFooterFlags(); 
         applyDataToUI();
       })
       .catch(err => {
@@ -285,7 +285,7 @@
       });
   }
 
-  // 🚩 行った国を自動で最左にソートする機能
+  // 🚩 行った国を左側に自動ソートする国旗ビルダー
   function buildFooterFlags() {
     const scrollBox = document.getElementById("flag-scroll-box");
     scrollBox.innerHTML = "";
@@ -304,7 +304,11 @@
       
       const img = document.createElement("div");
       img.className = "flag-img";
-      img.style.backgroundImage = `url('https://flagcdn.com/w80/${c.id.toLowerCase().split('-')[0]}.png')`;
+      
+      // ⭕【国旗バグ修正】URL破壊の原因だったsplitを取り除き、ハワイ(US-HI)のみ親国旗(us)を、その他はそのままのIDを充当
+      let flagCode = c.id.toLowerCase();
+      if (flagCode === "us-hi") flagCode = "us";
+      img.style.backgroundImage = `url('https://flagcdn.com/w80/${flagCode}.png')`;
       
       const name = document.createElement("div");
       name.className = "flag-name"; name.innerText = c.name;
@@ -329,7 +333,6 @@
       const status = userGlobalData[id].status;
       const years = userGlobalData[id].years;
       
-      // 🗺️ スプレッドシートのC列（numericId）を狙って直接地図を着色！
       let targetNumericId = "";
       for (let c of masterCountries) {
          if (c.id === upId && c.numericId) { 
@@ -338,7 +341,7 @@
          }
       }
       
-      if (upId === "US-HI") targetNumericId = "840"; // ハワイは親のアメリカ本土を点灯
+      if (upId === "US-HI") targetNumericId = "840"; 
 
       if (targetNumericId) {
         const poly = d3.select("#poly-raw-id-" + targetNumericId);
@@ -353,8 +356,11 @@
       const item = document.createElement("div");
       item.className = "list-item";
       
+      let listFlagCode = upId.toLowerCase();
+      if (listFlagCode === "us-hi") listFlagCode = "us";
+      
       item.innerHTML = `
-        <div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${upId.toLowerCase().split('-')[0]}.png')"></div>
+        <div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${listFlagCode}.png')"></div>
         <span class="${status === "resident" ? "tag-resident" : "tag-visited"}">${status === "resident" ? "在住" : "訪問"}</span>
         <span>${cName} (${years})</span>
       `;
@@ -392,7 +398,10 @@
   function updateModalFields(id) {
     const name = countryNameMap[id] || id;
     document.getElementById("modal-title").innerText = name;
-    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().split('-')[0]}.png')`;
+    
+    let modalFlagCode = id.toLowerCase();
+    if (modalFlagCode === "us-hi") modalFlagCode = "us";
+    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${modalFlagCode}.png')`;
     
     if (userGlobalData[id]) {
       document.getElementById("status-select").value = userGlobalData[id].status;
