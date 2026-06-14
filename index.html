@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (3D球体白地図・完全修正版)</title>
+  <title>世界旅行足跡マップ (3D球体白地図・日本中心版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -41,7 +41,7 @@
     }
     .country-polygon:hover { fill: #f1f5f9; }
     
-    /* 🚩 国土を単色のフラットデザインで美しくカラーリング */
+    /* 🚩 国土をスタイリッシュな単色フラットデザインで色付け */
     .country-polygon.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 1px; }
     .country-polygon.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 1px; }
 
@@ -153,7 +153,6 @@
 </div>
 
 <script>
-  // ⚠️【最重要】ここにGASの「デプロイを管理」からコピーした /exec URLを貼り付けてください。
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwtLzUC29QrTsj34SufDEdRvHdRvBPLq2_liW5VKUO_K9LlB8_natzmJzAtchvuvywJHg/exec";
 
   let masterCountries = []; 
@@ -162,7 +161,7 @@
   let selectedId = null;
   let countryNameMap = {}; 
 
-  // --- D3.js 3D地球儀描画システム完全復元 ---
+  // --- 最初期のD3.js 3D球体白地図システムを完全復元 ---
   const svg = d3.select("#world-map-svg");
   const width = document.getElementById("map-container").offsetWidth;
   const height = 500;
@@ -182,7 +181,7 @@
 
   const mapGroup = svg.append("g");
 
-  // ドラッグ回転とズーム
+  // 回転・ズーム
   svg.call(d3.drag().on("drag", (event) => {
     const rotate = projection.rotate();
     const k = 75 / projection.scale();
@@ -200,11 +199,10 @@
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
   }
 
-  // 地形データのロード
+  // 地形データをロード
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     let countries = topojson.feature(topology, topology.objects.countries).features;
     
-    // スプレッドシート側の「数値ID」を名寄せする標準マップ
     const isoNumericMap = { "392": "JP", "840": "US", "124": "CA", "156": "CN", "036": "AU" };
 
     // アメリカ本土からハワイを切り離す
@@ -234,7 +232,7 @@
       }
     });
 
-    // 陸地の描画
+    // 陸地描画
     mapGroup.selectAll("path")
       .data(countries)
       .enter()
@@ -250,7 +248,8 @@
         openModal(code, name);
       });
       
-    projection.rotate([-140, -30]); // 日本とハワイが見えやすい初期位置
+    // ⭕【ご要望反映】初期画面は「日本中心」にきれいにセット
+    projection.rotate([-138, -36]); 
     updateMapDrawing();
   });
 
@@ -268,18 +267,16 @@
     fetch(url)
       .then(res => res.json())
       .then(data => {
-        // 1. 国マスター配列を受け取る
         masterCountries = data.countryMaster || [];
         countryNameMap = {};
         masterCountries.forEach(c => { countryNameMap[c.id] = c.name; });
 
-        // 2. 渡航履歴データを素直に展開（ハードコード名寄せを完全撤廃）
         userGlobalData = {};
         if (data.userVisits) {
           for (let key in data.userVisits) {
              const cleanKey = key.toUpperCase().trim();
              
-             // ⭕【タイムスタンプ不具合自動クレンジング】ハワイの滞在年に長い日時文字が入っていたら自動で「2026」に書き換えてあげる安全ガード
+             // ⭕【タイムスタンプ自動クレンジング】ハワイの滞在年に日時文字が入っていたら「2026」に強制修正
              let visitItem = data.userVisits[key];
              if (cleanKey === "US-HI" && (visitItem.years.includes("T") || visitItem.years.length > 10)) {
                 visitItem.years = "2026"; 
@@ -320,7 +317,6 @@
   }
 
   function applyDataToUI() {
-    // クラスを一度すべてクリア
     mapGroup.selectAll(".country-polygon").classed("visited", false).classed("resident", false);
     document.querySelectorAll('.flag-card').forEach(el => el.classList.remove("visited", "resident"));
     
@@ -335,13 +331,11 @@
       const status = userGlobalData[id].status;
       const years = userGlobalData[id].years;
       
-      // 国土をクラス（単色）で綺麗に色付け
       const poly = d3.select("#poly-" + upId);
       if (!poly.empty()) {
         poly.classed(status, true);
       }
       
-      // コレクションカードの点灯
       const card = document.getElementById("card-" + upId);
       if (card) { card.classList.add(status); }
       
@@ -350,7 +344,6 @@
       const item = document.createElement("div");
       item.className = "list-item";
       
-      // リスト横にミニ国旗アイコンを動的生成
       item.innerHTML = `
         <div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${upId.toLowerCase()}.png')"></div>
         <span class="${status === "resident" ? "tag-resident" : "tag-visited"}">${status === "resident" ? "在住" : "訪問"}</span>
