@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (極小国スマートピン搭載版)</title>
+  <title>世界旅行足跡マップ (国境線ビジュアル強化版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -34,21 +34,33 @@
 
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
 
+    /* 基本の国土：境界線をシャープにしつつ馴染む色合いに */
     .country-polygon {
-      fill: #ffffff; stroke: #94a3b8; stroke-width: 0.5px; transition: fill 0.2s; cursor: pointer;
+      fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s; cursor: pointer;
     }
     .country-polygon:hover { fill: #f8fafc; }
     
-    .country-polygon.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 1px; }
-    .country-polygon.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 1px; }
-
-    /* 📍 極小国ピンのカスタムスタイル */
-    .small-country-pin {
-      fill: #ffffff; stroke: #475569; stroke-width: 1.5px; cursor: pointer; transition: all 0.2s;
+    /* 🎨【ここを強化】同じ色で隣り合っても白の内枠（stroke）で境界線を100%クッキリ分離 */
+    .country-polygon.visited { 
+      fill: #10b981 !important; 
+      stroke: #ffffff !important; 
+      stroke-width: 1.2px !important; 
+      stroke-linejoin: round;
     }
-    .small-country-pin:hover { fill: #f1f5f9; stroke-width: 2.5px; }
-    .small-country-pin.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 2px; }
-    .small-country-pin.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 2px; }
+    .country-polygon.resident { 
+      fill: #3b82f6 !important; 
+      stroke: #ffffff !important; 
+      stroke-width: 1.2px !important; 
+      stroke-linejoin: round;
+    }
+
+    /* 極小国ピン：視認性を高めた外枠スタイル */
+    .small-country-pin {
+      fill: #ffffff; stroke: #1e293b; stroke-width: 2px; cursor: pointer; transition: all 0.2s;
+    }
+    .small-country-pin:hover { fill: #f1f5f9; stroke-width: 3px; transform: scale(1.2); }
+    .small-country-pin.visited { fill: #10b981 !important; stroke: #ffffff !important; stroke-width: 1.5px; }
+    .small-country-pin.resident { fill: #3b82f6 !important; stroke: #ffffff !important; stroke-width: 1.5px; }
 
     .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
 
@@ -178,7 +190,6 @@
 </div>
 
 <script>
-  // ⚠️【最重要】ここにご自身の最新のGAS URLを正確に貼り付けてください
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxxcDjHqgJ0uS0uWsnd1XGoS0JuPu-mB0_bQA_aSIG8MGDElBjX3Nxqv9JtLCT9zShJLw/exec";
 
   let masterCountries = []; 
@@ -189,7 +200,6 @@
   let geoJsonMapData = []; 
   let currentSortMode = 'fav'; 
 
-  // 📍 極小国・都市国家の緯度経度データマッピング（国マスターのIDと完全同期）
   const smallCountries = [
     { id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 },
     { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 },
@@ -218,7 +228,7 @@
     .attr("d", pathGenerator);
 
   const mapGroup = svg.append("g");
-  const pinGroup = svg.append("g"); // ピン専用のレイヤーグループ
+  const pinGroup = svg.append("g"); 
 
   svg.call(d3.drag().on("drag", (event) => {
     const rotate = projection.rotate();
@@ -232,18 +242,16 @@
     updateMapDrawing();
   }));
 
-  // 地図とピンの同時再描画ロジック
   function updateMapDrawing() {
     svg.select(".ocean-sphere").attr("d", pathGenerator);
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
-    drawSmallCountryPins(); // 地球儀の回転に合わせてピンの位置も再計算
+    drawSmallCountryPins(); 
   }
 
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
-    projection.rotate([-138, -36]); // 日本正面
+    projection.rotate([-138, -36]); 
     drawBaseMap();
-    drawSmallCountryPins();
   });
 
   function drawBaseMap() {
@@ -276,10 +284,10 @@
         openModal(alphaId, name);
       });
 
+    drawSmallCountryPins();
     updateMapDrawing();
   }
 
-  // 📍 極小国専用のインタラクティブ・ピンを描画する関数
   function drawSmallCountryPins() {
     pinGroup.selectAll(".small-country-pin").remove();
 
@@ -301,14 +309,13 @@
          const coords = projection([d.lng, d.lat]);
          return coords ? coords[1] : 0;
       })
-      .attr("r", 5) // クリックしやすい綺麗なドットサイズ
-      // 💡 地球儀の裏側に回ったピンを隠す（クリッピング処理）
+      .attr("r", 6.5) 
       .style("display", d => {
          const gdistance = d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]);
          return gdistance > Math.PI / 2 ? "none" : "inline";
       })
       .on("click", function(event, d) {
-         event.stopPropagation(); // 下層にある大海原や別の大陸のクリック発火を防ぐ
+         event.stopPropagation(); 
          if (!currentUsername) { alert("先にお名前を入力して『設定ロード』ボタンを押してください。"); return; }
          const name = countryNameMap[d.id] || d.name;
          openModal(d.id, name);
@@ -465,7 +472,7 @@
       listDiv.appendChild(item);
     }
     
-    updateMapDrawing(); // ピンの色も同期させるためここで呼び出す
+    drawSmallCountryPins(); 
     if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。地球または下の国旗をタップして登録してください。</div>'; }
   }
 
