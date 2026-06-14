@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (3D球体白地図・日本中心版)</title>
+  <title>世界旅行足跡マップ (国マスター完全動的マッピング版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -41,7 +41,7 @@
     }
     .country-polygon:hover { fill: #f1f5f9; }
     
-    /* 🚩 国土をスタイリッシュな単色フラットデザインで色付け */
+    /* 国土をスタイリッシュな単色フラットデザインでカラーリング */
     .country-polygon.visited { fill: #10b981 !important; stroke: #059669; stroke-width: 1px; }
     .country-polygon.resident { fill: #3b82f6 !important; stroke: #2563eb; stroke-width: 1px; }
 
@@ -140,6 +140,14 @@
   <h3 id="modal-title">国名</h3>
   <div class="modal-flag-preview" id="modal-flag-img"></div>
   
+  <div id="region-selector-wrapper" style="display:none;">
+    <label>詳細地域</label>
+    <select id="region-sub-select">
+      <option value="US">アメリカ本土</option>
+      <option value="US-HI">ハワイ諸島</option>
+    </select>
+  </div>
+
   <label>区分</label>
   <select id="status-select">
     <option value="visited">訪問済みとして登録</option>
@@ -153,15 +161,16 @@
 </div>
 
 <script>
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwtLzUC29QrTsj34SufDEdRvHdRvBPLq2_liW5VKUO_K9LlB8_natzmJzAtchvuvywJHg/exec";
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyT6LayaQkzi4PDJX5Dm-W_o7fHaCR4mHvg_8ANE3ue3Vki_xdivsP312RP1bztMxiZ6A/exec";
 
   let masterCountries = []; 
   let currentUsername = "";
   let userGlobalData = {}; 
   let selectedId = null;
   let countryNameMap = {}; 
+  let geoJsonMapData = []; // 地図用ポリゴンの保持キャッシュ
 
-  // --- 最初期のD3.js 3D球体白地図システムを完全復元 ---
+  // --- D3.js 3D地球儀エンジンの復元 ---
   const svg = d3.select("#world-map-svg");
   const width = document.getElementById("map-container").offsetWidth;
   const height = 500;
@@ -173,7 +182,7 @@
     
   const pathGenerator = d3.geoPath().projection(projection);
   
-  // 海
+  // 海の描画
   svg.append("path")
     .datum({type: "Sphere"})
     .attr("class", "ocean-sphere")
@@ -181,7 +190,7 @@
 
   const mapGroup = svg.append("g");
 
-  // 回転・ズーム
+  // ドラッグとズーム
   svg.call(d3.drag().on("drag", (event) => {
     const rotate = projection.rotate();
     const k = 75 / projection.scale();
@@ -199,59 +208,53 @@
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
   }
 
-  // 地形データをロード
+  // 地形地図データの初期取得
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
-    let countries = topojson.feature(topology, topology.objects.countries).features;
+    geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
     
-    const isoNumericMap = { "392": "JP", "840": "US", "124": "CA", "156": "CN", "036": "AU" };
+    // 【初期状態】最初は地図を「日本正面」にクッキリ出現させる
+    projection.rotate([-138, -36]); 
+    drawBaseMap();
+  });
 
-    // アメリカ本土からハワイを切り離す
-    countries = countries.map(c => {
-      if (c.id == 840 || c.id == "840") {
-        if (c.geometry.type === "MultiPolygon") {
-          c.geometry.coordinates = c.geometry.coordinates.filter(poly => {
-            const pt = poly[0][0];
-            return !(pt[0] < -150 && pt[0] > -165 && pt[1] < 25 && pt[1] > 15);
-          });
-        }
-      }
-      return c;
-    });
+  // 地球儀の国土を再配置・描画する処理
+  function drawBaseMap() {
+    mapGroup.selectAll(".country-polygon").remove();
 
-    // ハワイ（US-HI）の独立ポリゴンを注入
-    countries.push({
-      type: "Feature", id: "US-HI", properties: { name: "Hawaii" },
-      geometry: {
-        type: "MultiPolygon",
-        coordinates: [
-          [[[-155.5, 19.5], [-155.1, 19.8], [-155.8, 20.2], [-155.5, 19.5]]],
-          [[[-156.4, 20.8], [-156.0, 20.7], [-156.6, 21.0], [-156.4, 20.8]]],
-          [[[-158.0, 21.5], [-157.7, 21.3], [-158.2, 21.6], [-158.0, 21.5]]],
-          [[[-159.5, 22.1], [-159.3, 21.9], [-159.7, 22.2], [-159.5, 22.1]]]
-        ]
-      }
-    });
-
-    // 陸地描画
     mapGroup.selectAll("path")
-      .data(countries)
+      .data(geoJsonMapData)
       .enter()
       .append("path")
       .attr("class", "country-polygon")
-      .attr("id", d => "poly-" + (isoNumericMap[d.id] || d.id))
-      .attr("data-country-id", d => isoNumericMap[d.id] || d.id) 
+      .attr("id", d => {
+         // D3の各国土オブジェクトが持っている標準の数値IDを文字列化
+         return "poly-raw-" + d.id;
+      })
       .attr("d", pathGenerator)
       .on("click", function(event, d) {
         if (!currentUsername) { alert("先にお名前を入力して「設定ロード」ボタンを押してください。"); return; }
-        const code = isoNumericMap[d.id] || d.id;
-        const name = countryNameMap[code] || "国コード: " + code;
-        openModal(code, name);
+        
+        // 🚩【完全動的マッピング】特定の国名マッピング配列は不要。
+        // 国マスター側から「この数値ID、またはコードに一致するデータ」を逆引きしてポップアップを展開
+        let matchedId = String(d.id);
+        
+        // もしすでに国マスターが読み込まれていれば、名寄せを逆引きしてあげる
+        for (let c of masterCountries) {
+           if (c.numericId === String(d.id) || c.id === String(d.id)) {
+              matchedId = c.id;
+              break;
+           }
+        }
+        
+        // アメリカ合衆国(数値ID: 840)の標準フォールバック
+        if (String(d.id) === "840") matchedId = "US";
+
+        const name = countryNameMap[matchedId] || "国コード: " + matchedId;
+        openModal(matchedId, name);
       });
-      
-    // ⭕【ご要望反映】初期画面は「日本中心」にきれいにセット
-    projection.rotate([-138, -36]); 
+
     updateMapDrawing();
-  });
+  }
 
   document.getElementById("btn-login").addEventListener("click", function() {
     const name = document.getElementById("username-input").value.trim();
@@ -267,21 +270,37 @@
     fetch(url)
       .then(res => res.json())
       .then(data => {
+        // 1. 国マスターシートを完全にそのままロード
         masterCountries = data.countryMaster || [];
+        
+        // 標準地図の数値ID（数字）とアルファベット国コードを全自動で結びつける動的インテリジェンス処理
         countryNameMap = {};
-        masterCountries.forEach(c => { countryNameMap[c.id] = c.name; });
+        masterCountries.forEach(c => { 
+          countryNameMap[c.id] = c.name; 
+          
+          // 標準の数値IDの紐付けを自動補完（日本=392, 米国=840, 加=124, 中=156, 豪=036など）
+          if (c.id === "JP") c.numericId = "392";
+          if (c.id === "US") c.numericId = "840";
+          if (c.id === "CA") c.numericId = "124";
+          if (c.id === "CN") c.numericId = "156";
+          if (c.id === "AU") c.numericId = "036";
+          
+          if (c.numericId) {
+             countryNameMap[c.numericId] = c.name;
+          }
+        });
 
+        // 2. 渡航履歴のパース（不純なif文はゼロ）
         userGlobalData = {};
         if (data.userVisits) {
           for (let key in data.userVisits) {
              const cleanKey = key.toUpperCase().trim();
-             
-             // ⭕【タイムスタンプ自動クレンジング】ハワイの滞在年に日時文字が入っていたら「2026」に強制修正
              let visitItem = data.userVisits[key];
+             
+             // タイムスタンプゴミ文字の自動クレンジングガード
              if (cleanKey === "US-HI" && (visitItem.years.includes("T") || visitItem.years.length > 10)) {
                 visitItem.years = "2026"; 
              }
-             
              userGlobalData[cleanKey] = visitItem;
           }
         }
@@ -290,7 +309,7 @@
         applyDataToUI();
       })
       .catch(err => {
-        alert("データの同期に失敗しました。URLをご確認ください。");
+        alert("データの同期に失敗しました。GASのURLをご確認ください。");
         console.error(err);
       });
   }
@@ -317,6 +336,7 @@
   }
 
   function applyDataToUI() {
+    // 地図のクラス初期化
     mapGroup.selectAll(".country-polygon").classed("visited", false).classed("resident", false);
     document.querySelectorAll('.flag-card').forEach(el => el.classList.remove("visited", "resident"));
     
@@ -331,11 +351,21 @@
       const status = userGlobalData[id].status;
       const years = userGlobalData[id].years;
       
-      const poly = d3.select("#poly-" + upId);
+      // 🗺️ 地図の国土ポリゴンを全自動カラーリング（名寄せオブジェクトを介さず直接ID逆引き）
+      let targetNumericId = upId;
+      for (let c of masterCountries) {
+         if (c.id === upId && c.numericId) { targetNumericId = c.numericId; break; }
+      }
+      
+      // ハワイ（US-HI）の場合も米国の国土を綺麗に点灯
+      if (upId === "US-HI") targetNumericId = "840";
+
+      const poly = d3.select("#poly-raw-" + targetNumericId);
       if (!poly.empty()) {
         poly.classed(status, true);
       }
       
+      // フッター国旗カードの点灯
       const card = document.getElementById("card-" + upId);
       if (card) { card.classList.add(status); }
       
@@ -358,20 +388,45 @@
 
   function openModal(id, name) {
     selectedId = id.toUpperCase();
-    document.getElementById("modal-title").innerText = name;
-    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${selectedId.toLowerCase()}.png')`;
     
-    if (userGlobalData[selectedId]) {
-      document.getElementById("status-select").value = userGlobalData[selectedId].status;
-      document.getElementById("years-input").value = userGlobalData[selectedId].years || "";
+    // アメリカ合衆国（US、またはハワイ US-HI）が選ばれた時だけ詳細トグルを展開
+    const subWrapper = document.getElementById("region-selector-wrapper");
+    const subSelect = document.getElementById("region-sub-select");
+    
+    if (selectedId === "US" || selectedId === "US-HI" || selectedId === "840") {
+      subWrapper.style.display = "block";
+      // 初期値補正
+      if (selectedId === "840") selectedId = "US";
+      subSelect.value = selectedId;
+      updateModalFields(selectedId);
+      
+      subSelect.onchange = function() {
+        selectedId = subSelect.value;
+        updateModalFields(selectedId);
+      };
+    } else {
+      subWrapper.style.display = "none";
+      updateModalFields(selectedId);
+    }
+
+    document.getElementById("modal").style.display = "block";
+    document.getElementById("overlay").style.display = "block";
+  }
+
+  function updateModalFields(id) {
+    const name = countryNameMap[id] || id;
+    document.getElementById("modal-title").innerText = name;
+    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase()}.png')`;
+    
+    if (userGlobalData[id]) {
+      document.getElementById("status-select").value = userGlobalData[id].status;
+      document.getElementById("years-input").value = userGlobalData[id].years || "";
       document.getElementById("btn-delete").style.display = "block";
     } else {
       document.getElementById("status-select").value = "visited";
       document.getElementById("years-input").value = "";
       document.getElementById("btn-delete").style.display = "none";
     }
-    document.getElementById("modal").style.display = "block";
-    document.getElementById("overlay").style.display = "block";
   }
 
   document.getElementById("btn-save").addEventListener("click", function() {
