@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (3D球体・国旗マッピング完全修正版)</title>
+  <title>世界旅行足跡マップ (3D球体・国マスター連動完全修正版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -13,7 +13,7 @@
       margin: 0; padding: 20px; background-color: #f7fafc;
       font-family: sans-serif; color: #2d3748; text-align: center;
     }
-    .container { width: 100%; max-width: 800px; margin: 0 auto; text-align: left; }
+    .container { width: 100%; max-width: 850px; margin: 0 auto; text-align: left; }
     h1 { text-align: center; font-size: 22px; color: #1a202c; margin-bottom: 15px; }
     
     .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -41,7 +41,6 @@
     }
     .country-polygon:hover { fill: #f1f5f9; }
     
-    /* スタイリッシュな国境線の強調 */
     .country-polygon.visited, .country-polygon.resident {
       stroke: #334155; stroke-width: 1.2px;
     }
@@ -51,7 +50,7 @@
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 25px; }
     .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
     .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
     .tag-resident { background: #4299e1; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; }
     .tag-visited { background: #68d391; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; }
 
@@ -78,6 +77,8 @@
     .flag-card.visited .flag-img { filter: grayscale(0%) opacity(100%); border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
     .flag-card.resident .flag-img { filter: grayscale(0%) opacity(100%); border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
     .flag-name { color: #94a3b8; font-size: 11px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .flag-card.visited .flag-name { color: #34d399; font-weight: bold; }
+    .flag-card.resident .flag-name { color: #60a5fa; font-weight: bold; }
 
     /* ポップアップ */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
@@ -113,7 +114,8 @@
   <div class="map-wrapper" id="map-container">
     <div class="map-guide">🖱️ ドラッグで地球を回転 / ホイールで拡大縮小</div>
     <svg id="world-map-svg" width="100%" height="100%">
-      </svg>
+      <defs id="svg-defs-zone"></defs>
+    </svg>
   </div>
 
   <div class="list-section">
@@ -124,7 +126,7 @@
   </div>
 
   <div class="footer-flag-container">
-    <div class="footer-flag-title">🚩 国旗コレクション（国マスターから全自動ロードされます）</div>
+    <div class="footer-flag-title">🚩 国旗コレクション（スプレッドシートの「国マスター」から読み込まれます）</div>
     <div class="footer-flag-scroll" id="flag-scroll-box">
       <div style="color: #64748b; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
     </div>
@@ -148,7 +150,8 @@
 </div>
 
 <script>
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzM8ysyvHyLNAddhYvW7IKab0GEJlzn3yoiN6tdmFzcDAFiv4eq2mbKD4tjxAoe0vdEjQ/execL";
+  // ⚠️【最重要】ここに新しくデプロイし直した「GASの /exec URL」を貼り付けてください。
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzaG4TddvOByLnhSe-b2EMjyCd6nt07x0QZBUUJeEz3BGpItYEQt5mh9Nc-yse3uYCu/exec";
 
   let masterCountries = []; 
   let currentUsername = "";
@@ -192,33 +195,30 @@
     svg.select(".ocean-sphere").attr("d", pathGenerator);
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
     
-    // 【新開発】地球の回転に合わせて、国旗のスタンプ（位置・縮尺・傾き）をリアルタイムに再計算して追従させる
+    // 地球の回転に合わせて国旗のスタンプ位置を正確にシンクロさせる
     mapGroup.selectAll(".country-polygon").each(function(d) {
       const element = d3.select(this);
       const id = element.attr("data-country-id");
       
       if (userGlobalData[id]) {
-        // 国ごとの中心（緯度経度の重心）を計算して、地球儀上の3D画面座標に変換
         const centroid = d3.geoCentroid(d);
-        const pt = projection(centroid);
         const geoDistance = d3.geoDistance(projection.rotate().map(d => -d), centroid);
         
-        // 地球の表側にあるときだけ、その国専用の国旗パターンをその位置に「ジャストサイズ」で生成して固定する
-        if (geoDistance < Math.PI / 2 && pt) {
-          // シマシマ化を防ぐため、バッジ内部にクリッピング（型抜き）して描画
+        // 表側にあるときだけ型抜きパターン（国旗）を適用
+        if (geoDistance < Math.PI / 2) {
           element.style("fill", `url(#pattern-${id})`);
         } else {
-          element.style("fill", "#f8fafc"); // 裏側は非表示
+          element.style("fill", "#f8fafc");
         }
       }
     });
   }
 
-  // 地図の初期読み込み
+  // 3D白地図データの初期ロード
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     let countries = topojson.feature(topology, topology.objects.countries).features;
     
-    // スプレッドシート側の「数値ID」と地図側の「アルファベットID」を完全に噛み合わせるマップ
+    // スプレッドシート側の「数値ID」と地図データを名寄せする辞書
     const isoNumericMap = { 
       "392": "JP", "840": "US", "124": "CA", "156": "CN", "036": "AU",
       "JP": "JP", "US": "US", "CA": "CA", "CN": "CN", "AU": "AU"
@@ -236,7 +236,7 @@
       return c;
     });
 
-    // ハワイ独立ポリゴン
+    // ハワイ独立プロット
     countries.push({
       type: "Feature", id: "US-HI", properties: { name: "Hawaii" },
       geometry: {
@@ -256,7 +256,7 @@
       .append("path")
       .attr("class", "country-polygon")
       .attr("id", d => "poly-" + (isoNumericMap[d.id] || d.id))
-      .attr("data-country-id", d => isoNumericMap[d.id] || d.id) // 検索用IDを保持
+      .attr("data-country-id", d => isoNumericMap[d.id] || d.id) 
       .attr("d", pathGenerator)
       .on("click", function(event, d) {
         if (!currentUsername) { alert("先にお名前を入力して「設定ロード」ボタンを押してください。"); return; }
@@ -265,7 +265,7 @@
         openModal(code, name);
       });
       
-    projection.rotate([-138, -36]); // 最初は日本が中心
+    projection.rotate([-138, -36]); // 日本を正面に
     updateMapDrawing();
   });
 
@@ -273,61 +273,81 @@
     const name = document.getElementById("username-input").value.trim();
     if (!name) { alert("お名前を入力してください"); return; }
     currentUsername = name;
-    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん（3D・国マスター同期中）";
+    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん（スプレッドシート連動中）";
     document.getElementById("status-display").style.color = "#2b6cb0";
-    buildCountryList();
+    fetchUserData();
   });
 
-  function buildCountryList() {
-    // スプレッドシート側の「日本」や「392」、「ハワイ」の登録文字列をすべて正しくパースする国マスター
-    const baseMaster = [
-      { id: "JP", name: "日本" }, { id: "US", name: "アメリカ" }, { id: "US-HI", name: "ハワイ" },
-      { id: "GU", name: "グアム" }, { id: "MP", name: "サイパン" }, { id: "CA", name: "カナダ" },
-      { id: "CN", name: "中国" }, { id: "AU", name: "オーストラリア" }
-    ];
-    
-    const countriesISO = ["ae","af","ag","al","am","ao","ar","at","az","ba","bb","bd","be","bf","bg","bh","bi","bj","bn","bo","bs","bt","bw","by","bz","cd","cf","cg","ch","ci","cl","cm","co","cr","cu","cv","cy","cz","dj","dk","dm","do","dz","ec","ee","eg","er","et","fi","fj","fm","ga","gd","ge","gh","gl","gm","gn","gq","gr","gt","gw","gy","hn","hr","ht","hu","ie","il","iq","ir","is","jm","jo","ke","kg","kh","ki","km","kn","kp","kw","kz","la","lb","lc","li","lk","lr","ls","lt","lu","lv","ly","ma","mc","md","me","mg","mh","mk","ml","mm","mn","mr","mt","mu","mv","mw","mz","na","ne","ng","ni","nl","no","np","nr","om","pa","pe","pg","pk","pl","ps","pt","pw","py","qa","ro","rs","rw","sa","sb","sc","sd","se","si","sk","sl","sm","sn","so","sr","ss","st","sv","sy","sz","td","tg","tj","tl","tm","tn","to","tr","tt","tv","tz","ua","ug","uy","uz","va","vc","ve","ws","ye","za","zm","zw"];
-    
-    masterCountries = [...baseMaster];
-    countriesISO.forEach(code => {
-      const upCode = code.toUpperCase();
-      if (!masterCountries.some(c => c.id === upCode)) {
-        masterCountries.push({ id: upCode, name: upCode + " (国)" });
-      }
-    });
+  // GASから国マスターとユーザーの渡航データを一括取得
+  function fetchUserData() {
+    var url = GAS_API_URL + "?username=" + encodeURIComponent(currentUsername);
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        // 1. スプレッドシートの「国マスター」シートのリストをアプリに展開
+        masterCountries = data.countryMaster || [];
+        
+        // 万が一スプレッドシートの国マスターシートが空だった場合の自動バックアップ
+        if(masterCountries.length === 0) {
+           masterCountries = [
+             { id: "JP", name: "日本" }, { id: "US", name: "アメリカ" }, { id: "US-HI", name: "ハワイ" },
+             { id: "CA", name: "カナダ" }, { id: "CN", name: "中国" }, { id: "AU", name: "オーストラリア" },
+             { id: "GU", name: "グアム" }, { id: "MP", name: "サイパン" }
+           ];
+        }
 
-    countryNameMap = {};
-    masterCountries.forEach(c => { countryNameMap[c.id] = c.name; });
+        countryNameMap = {};
+        masterCountries.forEach(c => { countryNameMap[c.id] = c.name; });
+        
+        // 表記ゆれ（数字コード等）の名寄せ名簿を補完
+        countryNameMap["392"] = "日本"; countryNameMap["840"] = "アメリカ"; countryNameMap["124"] = "カナダ"; countryNameMap["156"] = "中国"; countryNameMap["036"] = "オーストラリア";
 
-    // スプレッドシート側の各種表記ゆれ（「日本」「392」など）を内部コード「JP」に変換する変換辞書
-    countryNameMap["392"] = "日本";
-    countryNameMap["840"] = "アメリカ";
-    countryNameMap["124"] = "カナダ";
-    countryNameMap["156"] = "中国";
-    countryNameMap["036"] = "オーストラリア";
+        // 2. ユーザーの渡航履歴データをパース（【修正】エラーを完全に防ぐ安全ガードを設置）
+        userGlobalData = {};
+        if (data.userVisits) {
+          for (let key in data.userVisits) {
+             let cleanKey = key.toUpperCase().trim();
+             if (cleanKey === "392" || cleanKey === "日本") cleanKey = "JP";
+             if (cleanKey === "840" || cleanKey === "アメリカ") cleanKey = "US";
+             if (cleanKey === "124" || cleanKey === "カナダ") cleanKey = "CA";
+             if (cleanKey === "156" || cleanKey === "中国") cleanKey = "CN";
+             if (cleanKey === "036" || cleanKey === "オーストラリア") cleanKey = "AU";
+             userGlobalData[cleanKey] = data.userVisits[key];
+          }
+        }
 
-    // 🚩【シマシマ対策】各国の国土の中に完全にフィットする形でスタンプ画像（パターン）を初期化
+        // 3. 画面の再構築
+        buildFlagPatternsAndFooter();
+        applyDataToUI();
+      })
+      .catch(err => {
+        alert("データの同期に失敗しました。GASのURL、またはデプロイの公開権限が『全員(Anyone)』になっているか確認してください。");
+        console.error(err);
+      });
+  }
+
+  // 国マスターを元に、国旗スタンプとフッターを動的生成
+  function buildFlagPatternsAndFooter() {
     let defs = svg.select("defs");
     if (defs.empty()) defs = svg.append("defs");
     defs.html("");
     
+    const scrollBox = document.getElementById("flag-scroll-box");
+    scrollBox.innerHTML = "";
+
     masterCountries.forEach(c => {
+      // 地図用の型抜き国旗スタンプの生成
       const pat = defs.append("pattern")
         .attr("id", `pattern-${c.id}`)
         .attr("patternUnits", "userSpaceOnUse")
-        // 地球儀の縮尺（225px）に合わせた最適な国旗のスタンプサイズ
         .attr("width", 200).attr("height", 150);
         
       pat.append("image")
-        .attr("href", `https://flagcdn.com/w160/${c.id.toLowerCase()}.png`)
+        .attr("href", `https://flagcdn.com/w160/${c.id.toLowerCase().replace('-hi', '-hi')}.png`)
         .attr("width", 200).attr("height", 150)
         .attr("opacity", "0.85");
-    });
 
-    // フッターの横スクロール生成
-    const scrollBox = document.getElementById("flag-scroll-box");
-    scrollBox.innerHTML = "";
-    masterCountries.forEach(c => {
+      // フッターの国旗カード生成
       const card = document.createElement("div");
       card.className = "flag-card"; card.id = `card-${c.id}`;
       card.onclick = function() { openModal(c.id, c.name); };
@@ -342,26 +362,6 @@
       card.appendChild(img); card.appendChild(name);
       scrollBox.appendChild(card);
     });
-
-    fetchUserData();
-  }
-
-  function fetchUserData() {
-    var url = GAS_API_URL + "?username=" + encodeURIComponent(currentUsername);
-    fetch(url).then(res => res.json()).then(data => {
-      // スプレッドシートから読み込んだ生データを、表記ゆれ（392や日本など）を考慮してすべてIDに名寄せ
-      userGlobalData = {};
-      for (let key in data) {
-         let cleanKey = key.toUpperCase().trim();
-         if (cleanKey === "392" || cleanKey === "日本") cleanKey = "JP";
-         if (cleanKey === "840" || cleanKey === "アメリカ") cleanKey = "US";
-         if (cleanKey === "124" || cleanKey === "カナダ") cleanKey = "CA";
-         if (cleanKey === "156" || cleanKey === "中国") cleanKey = "CN";
-         if (cleanKey === "036" || cleanKey === "オーストラリア") cleanKey = "AU";
-         userGlobalData[cleanKey] = data[key];
-      }
-      applyDataToUI();
-    }).catch(err => { alert("データの同期に失敗しました。"); });
   }
 
   function applyDataToUI() {
@@ -375,17 +375,18 @@
     
     for (let id in userGlobalData) {
       const upId = id.toUpperCase();
+      // 安全ガード：データが存在するときだけ処理
+      if (!userGlobalData[id]) continue;
+      
       const status = userGlobalData[id].status;
       const years = userGlobalData[id].years;
       
-      // 地図の国を国旗柄に変更
       const poly = d3.select("#poly-" + upId);
       if (!poly.empty()) {
         poly.classed(status, true);
         poly.style("fill", `url(#pattern-${upId})`);
       }
       
-      // フッター連動
       const card = document.getElementById("card-" + upId);
       if (card) { card.classList.add(status); }
       
@@ -397,9 +398,7 @@
       listDiv.appendChild(item);
     }
     
-    // 【重要】スタンプのズレ・シマシマ化を防ぐため、色付け後に最新の位置情報で地球儀を強制再描画
     updateMapDrawing();
-    
     if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。地球または下の国旗をタップして登録してください。</div>'; }
   }
 
