@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (白地図ズーム＆国旗フッター版)</title>
+  <title>世界旅行足跡マップ (3D球体白地図＆国旗塗りつぶし版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -13,7 +13,7 @@
       margin: 0; padding: 20px; background-color: #f7fafc;
       font-family: sans-serif; color: #2d3748; text-align: center;
     }
-    .container { width: 100%; max-width: 900px; margin: 0 auto; text-align: left; }
+    .container { width: 100%; max-width: 800px; margin: 0 auto; text-align: left; }
     h1 { text-align: center; font-size: 22px; color: #1a202c; margin-bottom: 15px; }
     
     .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -24,26 +24,28 @@
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
 
-    /* 【新開発】ドラッグ・ズーム対応の完全な白地図コンテナ */
+    /* 3D球体白地図コンテナ */
     .map-wrapper {
-      width: 100%; height: 450px; background-color: #ffffff;
+      width: 100%; height: 500px; background-color: #ebf8ff; /* 宇宙に浮かぶ地球を表現する薄い水色背景 */
       border: 2px solid #cbd5e0; border-radius: 12px; position: relative;
-      overflow: hidden; cursor: grab; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+      overflow: hidden; cursor: grab; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
     }
     .map-wrapper:active { cursor: grabbing; }
 
+    /* 3D地球のベース（海） */
+    .ocean-sphere { fill: #ffffff; stroke: #cbd5e0; stroke-width: 1px; }
+
     /* 白地図と国境線のスタイル */
     .country-polygon {
-      fill: #f8fafc; stroke: #94a3b8; stroke-width: 0.8px; transition: fill 0.2s; cursor: pointer;
+      fill: #f8fafc; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s; cursor: pointer;
     }
-    .country-polygon:hover { fill: #e2e8f0; }
     
-    /* 足跡がついた国土の塗りつぶし色 */
-    .country-polygon.visited { fill: #68d391 !important; stroke: #48bb78; }
-    .country-polygon.resident { fill: #4299e1 !important; stroke: #3182ce; }
+    /* 選択時のハイライト（国旗が透過で見えるように枠線を太く） */
+    .country-polygon.visited, .country-polygon.resident {
+      stroke: #2d3748; stroke-width: 1px;
+    }
 
-    /* 操作ガイドの浮かぶバッジ */
-    .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; font-size: 11px; padding: 5px 10px; border-radius: 20px; pointer-events: none; }
+    .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; font-size: 11px; padding: 5px 10px; border-radius: 20px; pointer-events: none; z-index: 5; }
 
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 25px; }
     .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
@@ -52,7 +54,7 @@
     .tag-resident { background: #4299e1; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; }
     .tag-visited { background: #68d391; color: white; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; }
 
-    /* 【新開発】フッターの横スクロール国旗コレクションエリア */
+    /* フッターの横スクロール国旗エリア */
     .footer-flag-container {
       background: #1a202c; border-top: 4px solid #4299e1; padding: 15px; margin: 30px -20px -20px -20px; text-align: left;
     }
@@ -61,15 +63,11 @@
       display: flex; gap: 15px; overflow-x: auto; padding: 5px 5px 15px 5px;
       scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
     }
-    /* 横スクロールバーのカスタム（綺麗に見せるため） */
     .footer-flag-scroll::-webkit-scrollbar { height: 8px; }
     .footer-flag-scroll::-webkit-scrollbar-track { background: #2d3748; border-radius: 4px; }
     .footer-flag-scroll::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
 
-    /* フッター内の国旗カード */
-    .flag-card {
-      flex: 0 0 70px; text-align: center; cursor: pointer; transition: transform 0.2s;
-    }
+    .flag-card { flex: 0 0 70px; text-align: center; cursor: pointer; transition: transform 0.2s; }
     .flag-card:hover { transform: translateY(-4px); }
     .flag-img {
       width: 100%; height: 45px; border: 2px solid #4a5568; border-radius: 4px; box-sizing: border-box;
@@ -109,14 +107,24 @@
   </div>
 
   <div class="legend">
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#4299e1;border-radius:2px;"></span> 在住・在住歴</div>
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#68d391;border-radius:2px;"></span> 訪問済み</div>
+    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#f8fafc;border:1px solid #2d3748;border-radius:2px;"></span> 国土が国旗柄に変化します</div>
     <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#f8fafc;border:1px solid #94a3b8;border-radius:2px;"></span> 未訪問（白地図）</div>
   </div>
 
   <div class="map-wrapper" id="map-container">
-    <div class="map-guide">🖱️ ドラッグで移動 / ホイールで拡大縮小</div>
-    <svg id="world-map-svg" width="100%" height="100%"></svg>
+    <div class="map-guide">🖱️ ドラッグで地球を回転 / ホイールで拡大縮小</div>
+    <svg id="world-map-svg" width="100%" height="100%">
+      <defs>
+        <pattern id="fill-JP" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/jp.png" width="60" height="40" /></pattern>
+        <pattern id="fill-US" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/us.png" width="60" height="40" /></pattern>
+        <pattern id="fill-CA" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/ca.png" width="60" height="40" /></pattern>
+        <pattern id="fill-CN" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/cn.png" width="60" height="40" /></pattern>
+        <pattern id="fill-AU" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/au.png" width="60" height="40" /></pattern>
+        <pattern id="fill-US-HI" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/us-hi.png" width="60" height="40" /></pattern>
+        <pattern id="fill-GU" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/gu.png" width="60" height="40" /></pattern>
+        <pattern id="fill-MP" patternUnits="userSpaceOnUse" width="60" height="40"><image href="https://flagcdn.com/w80/mp.png" width="60" height="40" /></pattern>
+      </defs>
+    </svg>
   </div>
 
   <div class="list-section">
@@ -165,38 +173,58 @@
   let userGlobalData = {}; 
   let selectedId = null;
 
-  // 国コードと国名の対応辞書（地図クリック時用）
   const countryNameMap = {
     "JP": "日本", "US": "アメリカ", "CA": "カナダ", "CN": "中国", "AU": "オーストラリア", 
     "US-HI": "ハワイ", "GU": "グアム", "MP": "サイパン"
   };
 
-  // --- D3.jsによる高機能ズーム・ドラッグ白地図の描画エンジン ---
+  // --- D3.jsによる高精度3D球体（正射図法）白地図描画システム ---
   const svg = d3.select("#world-map-svg");
   const width = document.getElementById("map-container").offsetWidth;
-  const height = 450;
+  const height = 500;
   
-  // メルカトル図法で世界地図を設定
-  const projection = d3.geoMercator()
-    .scale(width / 6.2)
-    .translate([width / 2.1, height / 1.5]);
+  // 立体的な球体地球（Orthographic）を設定
+  const projection = d3.geoOrthographic()
+    .scale(220)
+    .translate([width / 2, height / 2])
+    .clipAngle(90); // 裏側の国を非表示にする
     
   const pathGenerator = d3.geoPath().projection(projection);
+  
+  // 地球の「海の丸い枠」を描画
+  svg.append("path")
+    .datum({type: "Sphere"})
+    .attr("class", "ocean-sphere")
+    .attr("d", pathGenerator);
+
   const mapGroup = svg.append("g");
 
-  // ドラッグとホイールズームの仕組みを合体
-  const zoomBehavior = d3.zoom()
-    .scaleExtent([1, 8]) // 1倍から8倍まで拡大可能
-    .on("zoom", (event) => {
-      mapGroup.attr("transform", event.transform);
-    });
-  svg.call(zoomBehavior);
+  // ドラッグ回転とホイールズームの仕組み
+  let lambda = 0, phi = 0; // 地球の回転角度
+  
+  svg.call(d3.drag().on("drag", (event) => {
+    const rotate = projection.rotate();
+    // ドラッグ量に応じて地球を回す
+    const k = 75 / projection.scale();
+    projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]);
+    updateMapDrawing();
+  }));
 
-  // 世界の国境線データをオンラインからセキュアに取得して白地図を描画
+  svg.call(d3.zoom().scaleExtent([0.8, 5]).on("zoom", (event) => {
+    projection.scale(220 * event.transform.k);
+    updateMapDrawing();
+  }));
+
+  function updateMapDrawing() {
+    svg.select(".ocean-sphere").attr("d", pathGenerator);
+    mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
+  }
+
+  // 世界の国境データをロード
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
     const countries = topojson.feature(topology, topology.objects.countries).features;
     
-    // ISOの数字コードからアルファベット2文字に変換するための簡易マッピング
+    // 国コード変換辞書（日本「392」を100%「JP」として紐付け）
     const isoNumericMap = {
       "392": "JP", "840": "US", "124": "CA", "156": "CN", "036": "AU"
     };
@@ -206,10 +234,7 @@
       .enter()
       .append("path")
       .attr("class", "country-polygon")
-      .attr("id", d => {
-        const code = isoNumericMap[d.id] || d.id;
-        return "poly-" + code;
-      })
+      .attr("id", d => "poly-" + (isoNumericMap[d.id] || d.id))
       .attr("d", pathGenerator)
       .on("click", function(event, d) {
         if (!currentUsername) {
@@ -220,44 +245,39 @@
         const name = countryNameMap[code] || "未定義の国 (" + code + ")";
         openModal(code, name);
       });
+      
+    // 初期表示用に日本側（東経138度、北緯36度付近）に地球を回転させておく
+    projection.rotate([-138, -36]);
+    updateMapDrawing();
   });
 
-  // フッターの国旗がタップされたときの処理
   function triggerCountrySelect(code, name) {
-    if (!currentUsername) {
-      alert("先にお名前を入力して「設定ロード」ボタンを押してください。");
-      return;
-    }
+    if (!currentUsername) { alert("先にお名前を入力して「設定ロード」ボタンを押してください。"); return; }
     openModal(code, name);
   }
 
-  // 設定ロードボタン
   document.getElementById("btn-login").addEventListener("click", function() {
     const name = document.getElementById("username-input").value.trim();
     if (!name) { alert("お名前を入力してください"); return; }
     currentUsername = name;
-    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん（白地図システム連動中）";
+    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん（3Dシステム連動中）";
     document.getElementById("status-display").style.color = "#2b6cb0";
     fetchUserData();
   });
 
   function fetchUserData() {
     var url = GAS_API_URL + "?username=" + encodeURIComponent(currentUsername);
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        userGlobalData = data || {};
-        applyDataToUI();
-      })
-      .catch(err => {
-        alert("通信に失敗しました。最下部のURLが正しいか確認してください。");
-        console.error(err);
-      });
+    fetch(url).then(res => res.json()).then(data => {
+      userGlobalData = data || {};
+      applyDataToUI();
+    }).catch(err => {
+      alert("通信に失敗しました。最下部のURLを確認してください。");
+    });
   }
 
   function applyDataToUI() {
-    // 地図とフッターのスタイルを一旦全部リセット
-    d3.selectAll(".country-polygon").classed("visited", false).classed("resident", false);
+    // 地図の全塗りつぶしを一度リセット（デフォルトの白に戻す）
+    mapGroup.selectAll(".country-polygon").style("fill", "#f8fafc").classed("visited", false).classed("resident", false);
     document.querySelectorAll('.flag-card').forEach(el => el.classList.remove("visited", "resident"));
     
     const listDiv = document.getElementById("data-list");
@@ -268,21 +288,16 @@
       const upId = id.toUpperCase();
       const status = userGlobalData[id].status;
       
-      // 1. 地図の国土を塗りつぶす
+      // 🚩【最重要】国土を「国旗のパターン」で直接塗りつぶす処理
       const poly = d3.select("#poly-" + upId);
       if (!poly.empty()) {
-        poly.classed(status, true);
+        poly.style("fill", "url(#fill-" + upId + ")").classed(status, true);
       }
       
-      // 2. フッターの国旗を点灯させる
+      // フッターの国旗点灯
       const card = document.getElementById("card-" + upId);
-      if (card) {
-        card.classList.add(status);
-      } else if (upId === "US-HI") {
-        // ハワイ州旗の個別ケア
-        const hiCard = document.getElementById("card-HI");
-        if(hiCard) hiCard.classList.add(status);
-      }
+      if (card) { card.classList.add(status); }
+      else if (upId === "US-HI") { const hiCard = document.getElementById("card-HI"); if(hiCard) hiCard.classList.add(status); }
       
       hasData = true;
       const cName = countryNameMap[upId] || upId;
@@ -291,7 +306,7 @@
       item.innerHTML = '<span class="' + (status === "resident" ? "tag-resident" : "tag-visited") + '">' + (status === "resident" ? "在住" : "訪問") + '</span><span>' + cName + '</span>';
       listDiv.appendChild(item);
     }
-    if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。白地図または下の国旗をタップして登録してください。</div>'; }
+    if (!hasData) { listDiv.innerHTML = '<div style="color:#a0aec0;font-size:12px;">未登録です。地球または下の国旗をタップして登録してください。</div>'; }
   }
 
   function openModal(id, name) {
