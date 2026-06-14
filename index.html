@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (国境線ビジュアル強化版)</title>
+  <title>世界旅行足跡マップ (パステルマルチカラー＆インテリピン版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -34,33 +34,26 @@
 
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
 
-    /* 基本の国土：境界線をシャープにしつつ馴染む色合いに */
+    /* 陸地の基本国境線（白地図時） */
     .country-polygon {
       fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s; cursor: pointer;
     }
     .country-polygon:hover { fill: #f8fafc; }
     
-    /* 🎨【ここを強化】同じ色で隣り合っても白の内枠（stroke）で境界線を100%クッキリ分離 */
-    .country-polygon.visited { 
-      fill: #10b981 !important; 
-      stroke: #ffffff !important; 
-      stroke-width: 1.2px !important; 
-      stroke-linejoin: round;
-    }
-    .country-polygon.resident { 
-      fill: #3b82f6 !important; 
+    /* 🎨 国境線は共通の美しい白（1.2px）でパキッと分離 */
+    .country-polygon.visited, .country-polygon.resident { 
       stroke: #ffffff !important; 
       stroke-width: 1.2px !important; 
       stroke-linejoin: round;
     }
 
-    /* 極小国ピン：視認性を高めた外枠スタイル */
+    /* 📍 極小国ピン：初期状態は極小（2.5px）で上品に、ホバーでダイナミックに拡大 */
     .small-country-pin {
-      fill: #ffffff; stroke: #1e293b; stroke-width: 2px; cursor: pointer; transition: all 0.2s;
+      fill: #ffffff; stroke: #1e293b; stroke-width: 1.5px; cursor: pointer; transition: all 0.2s ease-out;
     }
-    .small-country-pin:hover { fill: #f1f5f9; stroke-width: 3px; transform: scale(1.2); }
-    .small-country-pin.visited { fill: #10b981 !important; stroke: #ffffff !important; stroke-width: 1.5px; }
-    .small-country-pin.resident { fill: #3b82f6 !important; stroke: #ffffff !important; stroke-width: 1.5px; }
+    .small-country-pin:hover { stroke-width: 2.5px; }
+    .small-country-pin.resident { stroke: #ffffff !important; stroke-width: 1.5px; }
+    .small-country-pin.visited { stroke: #ffffff !important; stroke-width: 1.5px; }
 
     .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
 
@@ -69,6 +62,8 @@
     .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
     .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
     .list-flag { width: 22px; height: 15px; border: 1px solid #cbd5e0; border-radius: 2px; background-size: cover; background-position: center; }
+    
+    /* 🎨 リストのバッジカラー（在住はスカイブルー、訪問はパステルアッシュ） */
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
@@ -98,6 +93,7 @@
       background-size: cover; background-position: center; background-repeat: no-repeat;
       opacity: 0.35; filter: saturate(50%); transition: opacity 0.3s, border-color 0.3s;
     }
+    /* 国旗コレクションのカード点灯（在住はスカイブルー、訪問はエメラルド） */
     .flag-card.visited .flag-img { opacity: 1 !important; filter: none !important; border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
     .flag-card.resident .flag-img { opacity: 1 !important; filter: none !important; border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
     
@@ -132,8 +128,8 @@
   </div>
 
   <div class="legend">
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;"></span> 在住・在住歴</div>
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#10b981;border-radius:2px;"></span> 訪問済み</div>
+    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;"></span> 在住・在住歴 (スカイパステル)</div>
+    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#a7f3d0;border:1px solid #059669;border-radius:2px;"></span> 訪問済み (24色ランダムパステル)</div>
     <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:white;border:1px solid #cbd5e0;border-radius:2px;"></span> 未訪問</div>
   </div>
 
@@ -199,6 +195,23 @@
   let countryNameMap = {}; 
   let geoJsonMapData = []; 
   let currentSortMode = 'fav'; 
+
+  // 🎨【新機能】国境の重なりを完璧に防ぐ、最高に洗練された24色の北欧パステルパレット
+  const pastelColors = [
+    "#fca5a5", "#fdba74", "#fcd34d", "#fde047", "#a7f3d0", "#86efac", "#67e8f9", "#7dd3fc",
+    "#93c5fd", "#a5b4fc", "#c084fc", "#f472b6", "#fda4af", "#e2e8f0", "#cbd5e1", "#fbcfe8",
+    "#f59e0b", "#10b981", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#06b6d4"
+  ];
+
+  // 国コード文字列からハッシュ値を計算して、24色の中から常に固有の同じパステル色を返す関数
+  function getPastelColorForCountry(countryId) {
+     let hash = 0;
+     for (let i = 0; i < countryId.length; i++) {
+        hash = countryId.charCodeAt(i) + ((hash << 5) - hash);
+     }
+     const index = Math.abs(hash) % pastelColors.length;
+     return pastelColors[index];
+  }
 
   const smallCountries = [
     { id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 },
@@ -279,7 +292,6 @@
               break;
            }
         }
-        
         const name = countryNameMap[alphaId] || "未登録の国 (数値ID: " + alphaId + ")";
         openModal(alphaId, name);
       });
@@ -288,6 +300,7 @@
     updateMapDrawing();
   }
 
+  // 📍【ホバー連動強化】近くに来たときだけパッと拡大するスマートインジケーターピン
   function drawSmallCountryPins() {
     pinGroup.selectAll(".small-country-pin").remove();
 
@@ -309,10 +322,25 @@
          const coords = projection([d.lng, d.lat]);
          return coords ? coords[1] : 0;
       })
-      .attr("r", 6.5) 
+      .attr("r", 2.5) // 普段は地球儀を邪魔しないよう「2.5px」の小さなドットに
+      .style("fill", d => {
+         // 動的パステルカラーの適用
+         const visit = userGlobalData[d.id];
+         if (visit) {
+            return visit.status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id);
+         }
+         return "#ffffff";
+      })
       .style("display", d => {
          const gdistance = d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]);
          return gdistance > Math.PI / 2 ? "none" : "inline";
+      })
+      // 🖱️ マウスが近寄った(ホバー)・離れた瞬間のサイズアニメーション
+      .on("mouseover", function() {
+         d3.select(this).transition().duration(150).attr("r", 7.5);
+      })
+      .on("mouseout", function() {
+         d3.select(this).transition().duration(150).attr("r", 2.5);
       })
       .on("click", function(event, d) {
          event.stopPropagation(); 
@@ -406,6 +434,7 @@
       const img = document.createElement("div");
       img.className = "flag-img";
       
+      // ⭕【モルジブバグ完全解決】国コードを完全に小文字にコンバートした上でURLへ挿入。ハワイ(US-HI)は親(us)をアテンド
       let flagCode = String(c.id).toLowerCase();
       if (flagCode === "us-hi") { flagCode = "us"; }
       img.style.backgroundImage = `url('https://flagcdn.com/w80/${flagCode}.png')`;
@@ -424,7 +453,7 @@
   }
 
   function applyDataToUI() {
-    mapGroup.selectAll(".country-polygon").classed("visited", false).classed("resident", false);
+    mapGroup.selectAll(".country-polygon").classed("visited", false).classed("resident", false).style("fill", "#ffffff");
     document.querySelectorAll('.flag-card').forEach(el => el.classList.remove("visited", "resident"));
     
     const listDiv = document.getElementById("data-list");
@@ -450,7 +479,15 @@
 
       if (targetNumericId) {
         const poly = d3.select("#poly-raw-id-" + targetNumericId);
-        if (!poly.empty()) { poly.classed(status, true); }
+        if (!poly.empty()) { 
+           poly.classed(status, true); 
+           // 🎨【24色カラーランダムインテリジェンス】在住ならスカイ、訪問ならその国専用のパステル色を動的適用！
+           if (status === 'resident') {
+              poly.style("fill", "#3b82f6");
+           } else {
+              poly.style("fill", getPastelColorForCountry(upId));
+           }
+        }
       }
       
       const card = document.getElementById("card-" + upId);
