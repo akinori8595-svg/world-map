@@ -3,28 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>世界旅行足跡マップ (完全復元・全機能統合版)</title>
+  <title>世界旅行足跡マップ (UI復元・機能完全統合版)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
   <style>
     body { margin: 0; padding: 20px; background-color: #f7fafc; font-family: sans-serif; color: #2d3748; text-align: center; }
     .container { width: 100%; max-width: 850px; margin: 0 auto; text-align: left; }
-    h1 { text-align: center; font-size: 22px; color: #1a202c; margin-bottom: 15px; }
-    .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .user-box input { width: 60%; padding: 10px; font-size: 15px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; }
-    .user-box button { width: 35%; padding: 10px; font-size: 15px; background: #4299e1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; float: right; }
-    .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; }
-    .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
-    .country-polygon { fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; cursor: pointer; transition: 0.2s; }
-    .country-polygon.visited, .country-polygon.resident { stroke: #ffffff !important; stroke-width: 1.2px !important; }
-    .small-country-pin { stroke: #1e293b; stroke-width: 1px; cursor: pointer; transition: all 0.2s ease-out; opacity: 0.5; }
+    h1 { text-align: center; font-size: 22px; margin-bottom: 15px; }
+    .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; }
+    .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border-radius: 16px; position: relative; overflow: hidden; cursor: grab; }
+    .country-polygon { fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; cursor: pointer; }
+    .small-country-pin { fill: #ffffff; stroke: #1e293b; stroke-width: 1.5px; cursor: pointer; transition: all 0.2s; opacity: 0.6; }
     .small-country-pin:hover { r: 7.5px !important; stroke-width: 2px !important; opacity: 1 !important; }
-    .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left; }
-    .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; }
-    .flag-img { width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; opacity: 0.35; filter: saturate(50%); transition: 0.3s; }
-    .flag-card.visited .flag-img, .flag-card.resident .flag-img { opacity: 1 !important; filter: none !important; border-color: #10b981; }
+    .list-section { background: white; padding: 15px; border-radius: 10px; margin-top: 25px; }
+    .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+    .list-flag { width: 22px; height: 15px; background-size: cover; background-position: center; border: 1px solid #cbd5e0; }
+    .footer-flag-container { background: #1e293b; padding: 20px; margin-top: 20px; }
+    .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; color: #94a3b8; font-size: 11px; }
+    .flag-img { width: 100%; height: 48px; border-radius: 6px; background-size: cover; border: 1px solid #475569; opacity: 0.5; }
+    .flag-card.visited .flag-img { opacity: 1; border-color: #10b981; }
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 999; }
-    .modal-content { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 290px; z-index: 1000; }
+    .modal-content { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; z-index: 1000; }
   </style>
 </head>
 <body>
@@ -35,14 +35,9 @@
     <button id="btn-login">設定ロード</button>
   </div>
   <div class="map-wrapper" id="map-container"><svg id="world-map-svg" width="100%" height="100%"></svg></div>
+  <div class="list-section"><h3>登録済みリスト</h3><div id="data-list" class="list-grid"></div></div>
   <div class="footer-flag-container">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <p style="color:white; margin:0; font-weight:bold;">🚩 国旗コレクション</p>
-      <div class="sort-toggle-group">
-        <button class="sort-btn active" id="sort-btn-fav" onclick="changeSortMode('fav')">★ お気に入り</button>
-        <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 A-Z</button>
-      </div>
-    </div>
+    <p style="color:white; margin:0 0 10px 0;">🚩 国旗コレクション</p>
     <div class="footer-flag-scroll" id="flag-scroll-box" style="display:flex; gap:15px; overflow-x:auto;"></div>
   </div>
 </div>
@@ -54,16 +49,17 @@
   <label>年</label><input type="text" id="years-input">
   <button onclick="saveData()">保存</button><button onclick="deleteData()">削除</button><button onclick="closeModal()">戻る</button>
 </div>
+
 <script>
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyj4U0gGbquL5LD-UNVwKzcdW-I734t-rd9QvsE9XwSGkA8CkknkRZ9lLNX5yvbxm-Qzg/exec";
-  let masterCountries = [], userGlobalData = {}, currentUsername = "", currentSortMode = 'fav', countryNameMap = {};
+  let masterCountries = [], userGlobalData = {}, currentUsername = "", countryNameMap = {};
   const pastelColors = ["#fca5a5", "#fdba74", "#fcd34d", "#fde047", "#a7f3d0", "#86efac", "#67e8f9", "#7dd3fc", "#93c5fd", "#a5b4fc", "#c084fc", "#f472b6", "#fda4af", "#e2e8f0", "#cbd5e1", "#fbcfe8", "#f59e0b", "#10b981", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#06b6d4"];
   const neighborGroups = {"CA":"US", "US":"CA", "AU":"NZ", "NZ":"AU", "FR":"DE", "DE":"FR", "ES":"PT", "PT":"ES"};
 
   function getPastelColorForCountry(id) {
-     let hash = 0, combined = id + (neighborGroups[id] || "");
-     for (let i = 0; i < combined.length; i++) hash = combined.charCodeAt(i) + ((hash << 5) - hash);
-     return pastelColors[Math.abs(hash) % pastelColors.length];
+    let hash = 0, combined = id + (neighborGroups[id] || "");
+    for (let i = 0; i < combined.length; i++) hash = combined.charCodeAt(i) + ((hash << 5) - hash);
+    return pastelColors[Math.abs(hash) % pastelColors.length];
   }
 
   const smallCountries = [
@@ -79,27 +75,27 @@
   const svg = d3.select("#world-map-svg"), projection = d3.geoOrthographic().scale(225).translate([425, 250]).clipAngle(90);
   const path = d3.geoPath().projection(projection), mapGroup = svg.append("g"), pinGroup = svg.append("g");
 
-  // スクロール安定：回転に少し慣性を緩和
-  svg.call(d3.drag().on("drag", (e) => { projection.rotate([projection.rotate()[0] + e.dx * 0.3, projection.rotate()[1] - e.dy * 0.3]); updateMap(); }));
+  svg.call(d3.drag().on("drag", (e) => { projection.rotate([projection.rotate()[0] + e.dx * 0.3, projection.rotate()[1] - e.dy * 0.3]); drawMap(); }));
+
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topo => {
     mapGroup.selectAll("path").data(topojson.feature(topo, topo.objects.countries).features).enter().append("path")
       .attr("class", "country-polygon").attr("id", d => "poly-raw-id-" + String(Number(d.id)).padStart(3, '0'))
       .attr("d", path).on("click", (e, d) => {
-         let nid = String(Number(d.id)).padStart(3, '0');
-         let id = masterCountries.find(c => c.numericId === nid)?.id || nid;
-         openModal(id, countryNameMap[id]);
+        let nid = String(Number(d.id)).padStart(3, '0');
+        let id = masterCountries.find(c => c.numericId === nid)?.id || nid;
+        openModal(id, countryNameMap[id]);
       });
-    updateMap();
+    drawMap();
   });
 
-  function updateMap() {
-    mapGroup.selectAll(".country-polygon").attr("d", path);
+  function drawMap() {
+    mapGroup.selectAll("path").attr("d", path);
     pinGroup.selectAll(".small-country-pin").remove();
     pinGroup.selectAll("circle").data(smallCountries).enter().append("circle")
       .attr("class", d => "small-country-pin" + (userGlobalData[d.id] ? " " + userGlobalData[d.id].status : ""))
       .attr("cx", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[0] : 0)
       .attr("cy", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[1] : 0)
-      .attr("r", 1.8).style("fill", d => userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff")
+      .attr("r", 2.5).style("fill", d => userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff")
       .style("display", d => d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]) > Math.PI/2 ? "none" : "inline")
       .on("click", (e, d) => { e.stopPropagation(); openModal(d.id, countryNameMap[d.id]); });
   }
@@ -116,28 +112,24 @@
 
   function applyData() {
     mapGroup.selectAll(".country-polygon").classed("visited", false).classed("resident", false).style("fill", "#ffffff");
-    const listDiv = document.getElementById("data-list");
-    listDiv.innerHTML = "";
+    document.getElementById("data-list").innerHTML = "";
+    document.getElementById("flag-scroll-box").innerHTML = "";
+    
     for (let id in userGlobalData) {
       let nid = masterCountries.find(c => c.id === id.toUpperCase())?.numericId;
       if (id === "US-HI" || nid === "901") nid = "840";
       if (nid) {
         d3.select("#poly-raw-id-" + nid).classed(userGlobalData[id].status, true).style("fill", userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id.toUpperCase()));
-        document.getElementById("data-list").innerHTML += `<div class="list-item">${countryNameMap[id] || id} (${userGlobalData[id].years})</div>`;
+        document.getElementById("data-list").innerHTML += `<div class="list-item"><div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${id.toLowerCase()==='us-hi'?'us':id.toLowerCase()}.png')"></div>${countryNameMap[id]||id} (${userGlobalData[id].years})</div>`;
       }
     }
-    buildFlags(); updateMap();
-  }
-
-  function changeSortMode(mode) { currentSortMode = mode; buildFlags(); }
-  function buildFlags() {
-    const box = document.getElementById("flag-scroll-box"); box.innerHTML = "";
-    let sorted = [...masterCountries].sort((a,b) => currentSortMode==='fav' ? ((userGlobalData[b.id]?.status==='resident'?10000:0) + (userGlobalData[b.id]?.status==='visited'?1000:0)) - ((userGlobalData[a.id]?.status==='resident'?10000:0) + (userGlobalData[a.id]?.status==='visited'?1000:0)) : a.id.localeCompare(b.id));
-    sorted.forEach(c => {
-      let card = document.createElement("div"); card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : ""); card.onclick = () => openModal(c.id, c.name);
-      card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase() === 'us-hi' ? 'us' : c.id.toLowerCase()}.png')"></div><div style="color:#94a3b8; font-size:11px;">${c.name}</div>`;
-      box.appendChild(card);
+    masterCountries.forEach(c => {
+      let card = document.createElement("div"); card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : "");
+      card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase() === 'us-hi' ? 'us' : c.id.toLowerCase()}.png')"></div><div>${c.name}</div>`;
+      card.onclick = () => openModal(c.id, c.name);
+      document.getElementById("flag-scroll-box").appendChild(card);
     });
+    drawMap();
   }
 
   function openModal(id, name) { selectedId = id.toUpperCase(); document.getElementById("modal-title").innerText = name || id; document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block"; document.getElementById("status-select").value = userGlobalData[id]?.status || "visited"; document.getElementById("years-input").value = userGlobalData[id]?.years || ""; }
