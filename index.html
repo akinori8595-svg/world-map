@@ -47,6 +47,55 @@
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
+    <div id="slideshow-wrapper" style="margin: 20px 0; border-radius: 12px; overflow: hidden; height: 200px; background: #000; position: relative;">
+    <div id="slideshow-container" style="position: relative; width: 100%; height: 100%;">
+        </div>
+</div>
+
+<script>
+    (function() {
+        // 画像リスト（リポジトリのファイル名に合わせて定義）
+        const images = [
+            "01_peru_machu_picchu.png", "02_japan_kyoto.png", "03_morocco_sahara.png",
+            "04_iceland_aurora.png", "05_italy_venice.png", "06_india_taj_mahal.png",
+            "07_greece_santorini.png", "08_egypt_pyramids.png", "09_peru_cusco_market.png",
+            "10_thailand_floating_market.png", "11_france_paris.png", "12_turkey_cappadocia.png",
+            "13_australia_sydney.png", "14_brazil_rio.png", "15_vietnam_halong_bay.png",
+            "16_kenya_safari.png", "17_czech_prague.png", "18_peru_rainbow_mountain.png",
+            "19_china_great_wall.png", "20_mexico_chichen_itza.png", "21_switzerland_zermatt.png",
+            "22_argentina_iguazu.png", "23_jordan_petra.png", "24_usa_nyc.png",
+            "25_nepal_everest.png", "26_spain_barcelona.png", "27_portugal_lisbon.png",
+            "28_cuba_havana.png", "29_indonesia_bali.png", "30_new_zealand_milford_sound.png"
+        ];
+
+        const container = document.getElementById('slideshow-container');
+        const repoBase = "https://raw.githubusercontent.com/akinori8595-svg/world-map/main/";
+        let currentIndex = 0;
+
+        // 画像要素の初期化
+        images.forEach((img, index) => {
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.width = '100%';
+            div.style.height = '100%';
+            div.style.backgroundImage = `url('${repoBase}${img}')`;
+            div.style.backgroundSize = 'cover';
+            div.style.backgroundPosition = 'center';
+            div.style.transition = 'opacity 1.5s ease-in-out'; // フェードイン・アウトの時間
+            div.style.opacity = index === 0 ? '1' : '0';
+            container.appendChild(div);
+        });
+
+        // 切り替えロジック
+        setInterval(() => {
+            const children = container.children;
+            children[currentIndex].style.opacity = '0';
+            currentIndex = (currentIndex + 1) % children.length;
+            children[currentIndex].style.opacity = '1';
+        }, 5000); // 5秒ごとに切り替え
+    })();
+</script>
+    
     .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left; }
     .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; flex-wrap: wrap; gap: 10px; }
     .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin: 0; }
