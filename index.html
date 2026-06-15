@@ -47,55 +47,6 @@
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
 
-    <div id="slideshow-wrapper" style="margin: 20px 0; border-radius: 12px; overflow: hidden; height: 200px; background: #000; position: relative;">
-    <div id="slideshow-container" style="position: relative; width: 100%; height: 100%;">
-        </div>
-</div>
-
-<script>
-    (function() {
-        // 画像リスト（リポジトリのファイル名に合わせて定義）
-        const images = [
-            "01_peru_machu_picchu.png", "02_japan_kyoto.png", "03_morocco_sahara.png",
-            "04_iceland_aurora.png", "05_italy_venice.png", "06_india_taj_mahal.png",
-            "07_greece_santorini.png", "08_egypt_pyramids.png", "09_peru_cusco_market.png",
-            "10_thailand_floating_market.png", "11_france_paris.png", "12_turkey_cappadocia.png",
-            "13_australia_sydney.png", "14_brazil_rio.png", "15_vietnam_halong_bay.png",
-            "16_kenya_safari.png", "17_czech_prague.png", "18_peru_rainbow_mountain.png",
-            "19_china_great_wall.png", "20_mexico_chichen_itza.png", "21_switzerland_zermatt.png",
-            "22_argentina_iguazu.png", "23_jordan_petra.png", "24_usa_nyc.png",
-            "25_nepal_everest.png", "26_spain_barcelona.png", "27_portugal_lisbon.png",
-            "28_cuba_havana.png", "29_indonesia_bali.png", "30_new_zealand_milford_sound.png"
-        ];
-
-        const container = document.getElementById('slideshow-container');
-        const repoBase = "https://raw.githubusercontent.com/akinori8595-svg/world-map/main/";
-        let currentIndex = 0;
-
-        // 画像要素の初期化
-        images.forEach((img, index) => {
-            const div = document.createElement('div');
-            div.style.position = 'absolute';
-            div.style.width = '100%';
-            div.style.height = '100%';
-            div.style.backgroundImage = `url('${repoBase}${img}')`;
-            div.style.backgroundSize = 'cover';
-            div.style.backgroundPosition = 'center';
-            div.style.transition = 'opacity 1.5s ease-in-out'; // フェードイン・アウトの時間
-            div.style.opacity = index === 0 ? '1' : '0';
-            container.appendChild(div);
-        });
-
-        // 切り替えロジック
-        setInterval(() => {
-            const children = container.children;
-            children[currentIndex].style.opacity = '0';
-            currentIndex = (currentIndex + 1) % children.length;
-            children[currentIndex].style.opacity = '1';
-        }, 5000); // 5秒ごとに切り替え
-    })();
-</script>
-    
     .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left; }
     .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; flex-wrap: wrap; gap: 10px; }
     .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin: 0; }
@@ -161,6 +112,10 @@
     </div>
   </div>
 
+  <div id="slideshow-wrapper" style="margin: 20px 0; border-radius: 12px; overflow: hidden; height: 200px; background: #000; position: relative;">
+      <div id="slideshow-container" style="position: relative; width: 100%; height: 100%;"></div>
+  </div>
+
   <div class="footer-flag-container">
     <div class="footer-flag-title-row">
       <p class="footer-flag-title">🚩 国旗コレクション</p>
@@ -180,15 +135,6 @@
 <div class="modal-content" id="modal">
   <h3 id="modal-title">国名</h3>
   <div class="modal-flag-preview" id="modal-flag-img"></div>
-  
-  <div id="region-selector-wrapper" style="display:none;">
-    <label>詳細地域</label>
-    <select id="region-sub-select">
-      <option value="US">アメリカ本土</option>
-      <option value="US-HI">ハワイ諸島</option>
-    </select>
-  </div>
-
   <label>区分</label>
   <select id="status-select">
     <option value="visited">訪問済みとして登録</option>
@@ -203,16 +149,9 @@
 
 <script>
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyj4U0gGbquL5LD-UNVwKzcdW-I734t-rd9QvsE9XwSGkA8CkknkRZ9lLNX5yvbxm-Qzg/exec";
+  let masterCountries = [], currentUsername = "", userGlobalData = {}, selectedId = null, countryNameMap = {}, geoJsonMapData = [], currentSortMode = 'fav'; 
 
-  let masterCountries = []; 
-  let currentUsername = "";
-  let userGlobalData = {}; 
-  let selectedId = null;
-  let countryNameMap = {}; 
-  let geoJsonMapData = []; 
-  let currentSortMode = 'fav'; 
-
-  // 🎨 200色のパステルカラーを自動生成（HSL色相環を利用）
+  // 200色のパステル生成ロジック
   function generatePastelColors(count) {
      let colors = [];
      for (let i = 0; i < count; i++) {
@@ -225,221 +164,69 @@
 
   function getPastelColorForCountry(countryId) {
      let hash = 0;
-     for (let i = 0; i < countryId.length; i++) {
-        hash = countryId.charCodeAt(i) + ((hash << 5) - hash);
-     }
+     for (let i = 0; i < countryId.length; i++) { hash = countryId.charCodeAt(i) + ((hash << 5) - hash); }
      const index = Math.abs(hash) % countryColors.length;
      return countryColors[index];
   }
 
-  // 📍 小さな国の座標データ
-  const smallCountries = [
-    { id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 },
-    { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 },
-    { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 },
-    { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 },
-    { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 },
-    { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 },
-    { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 },
-    { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 },
-    { id: "GU", name: "Guam", lat: 13.4443, lng: 144.7937 },
-    { id: "MP", name: "Saipan", lat: 15.1772, lng: 145.7514 },
-    { id: "FM", name: "Micronesia", lat: 6.9248, lng: 158.1611 },
-    { id: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777 },
-    { id: "PF", name: "French Polynesia", lat: -17.6509, lng: -149.4068 }
-  ];
-
-  const svg = d3.select("#world-map-svg");
-  const width = document.getElementById("map-container").offsetWidth;
-  const height = 500;
-  
-  const projection = d3.geoOrthographic()
-    .scale(225)
-    .translate([width / 2, height / 2])
-    .clipAngle(90);
-    
-  const pathGenerator = d3.geoPath().projection(projection);
-  
-  svg.append("path")
-    .datum({type: "Sphere"})
-    .attr("class", "ocean-sphere")
-    .attr("d", pathGenerator);
-
-  const mapGroup = svg.append("g");
-  const pinGroup = svg.append("g"); 
-
-  // ドラッグ操作による回転
-  svg.call(d3.drag().on("drag", (event) => {
-    const rotate = projection.rotate();
-    const k = 75 / projection.scale();
-    projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]);
-    updateMapDrawing();
-  }));
-
-  // ズーム操作
-  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (event) => {
-    projection.scale(225 * event.transform.k);
-    updateMapDrawing();
-  }));
-
-  // 地図の再描画（ピンの位置を再計算して固定）
-  function updateMapDrawing() {
-    svg.select(".ocean-sphere").attr("d", pathGenerator);
-    mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
-    
-    // ピンの座標を更新して再描画
-    pinGroup.selectAll(".small-country-pin")
-      .attr("cx", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[0] : 0)
-      .attr("cy", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[1] : 0)
-      .style("display", d => {
-         const rotate = projection.rotate();
-         const gdistance = d3.geoDistance([d.lng, d.lat], [-rotate[0], -rotate[1]]);
-         return gdistance > Math.PI / 2 ? "none" : "inline";
+  // スライドショーの初期化
+  (function() {
+      const images = ["01_peru_machu_picchu.png", "02_japan_kyoto.png", "03_morocco_sahara.png", "04_iceland_aurora.png", "05_italy_venice.png", "06_india_taj_mahal.png", "07_greece_santorini.png", "08_egypt_pyramids.png", "09_peru_cusco_market.png", "10_thailand_floating_market.png", "11_france_paris.png", "12_turkey_cappadocia.png", "13_australia_sydney.png", "14_brazil_rio.png", "15_vietnam_halong_bay.png", "16_kenya_safari.png", "17_czech_prague.png", "18_peru_rainbow_mountain.png", "19_china_great_wall.png", "20_mexico_chichen_itza.png", "21_switzerland_zermatt.png", "22_argentina_iguazu.png", "23_jordan_petra.png", "24_usa_nyc.png", "25_nepal_everest.png", "26_spain_barcelona.png", "27_portugal_lisbon.png", "28_cuba_havana.png", "29_indonesia_bali.png", "30_new_zealand_milford_sound.png"];
+      const container = document.getElementById('slideshow-container');
+      const repoBase = "https://raw.githubusercontent.com/akinori8595-svg/world-map/main/";
+      let currentIndex = 0;
+      images.forEach((img, index) => {
+          const div = document.createElement('div');
+          div.style.position = 'absolute'; div.style.width = '100%'; div.style.height = '100%';
+          div.style.backgroundImage = `url('${repoBase}${img}')`;
+          div.style.backgroundSize = 'cover'; div.style.backgroundPosition = 'center';
+          div.style.transition = 'opacity 1.5s ease-in-out';
+          div.style.opacity = index === 0 ? '1' : '0';
+          container.appendChild(div);
       });
-  }
+      setInterval(() => {
+          const children = container.children;
+          children[currentIndex].style.opacity = '0';
+          currentIndex = (currentIndex + 1) % children.length;
+          children[currentIndex].style.opacity = '1';
+      }, 5000);
+  })();
 
-  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
-    geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
-    projection.rotate([-138, -36]); 
-    drawBaseMap();
-  });
+  const smallCountries = [{ id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 }, { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 }, { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 }, { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 }, { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 }, { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 }, { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 }, { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 }, { id: "GU", name: "Guam", lat: 13.4443, lng: 144.7937 }, { id: "MP", name: "Saipan", lat: 15.1772, lng: 145.7514 }, { id: "FM", name: "Micronesia", lat: 6.9248, lng: 158.1611 }, { id: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777 }, { id: "PF", name: "French Polynesia", lat: -17.6509, lng: -149.4068 }];
+  const svg = d3.select("#world-map-svg"), width = document.getElementById("map-container").offsetWidth, height = 500;
+  const projection = d3.geoOrthographic().scale(225).translate([width / 2, height / 2]).clipAngle(90);
+  const pathGenerator = d3.geoPath().projection(projection);
+  svg.append("path").datum({type: "Sphere"}).attr("class", "ocean-sphere").attr("d", pathGenerator);
+  const mapGroup = svg.append("g"), pinGroup = svg.append("g"); 
 
-  // 地図の初期描画
+  svg.call(d3.drag().on("drag", (event) => { const rotate = projection.rotate(); const k = 75 / projection.scale(); projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]); updateMapDrawing(); }));
+  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (event) => { projection.scale(225 * event.transform.k); updateMapDrawing(); }));
+
+  function updateMapDrawing() { svg.select(".ocean-sphere").attr("d", pathGenerator); mapGroup.selectAll(".country-polygon").attr("d", pathGenerator); pinGroup.selectAll(".small-country-pin").attr("cx", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[0] : 0).attr("cy", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[1] : 0).style("display", d => d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]) > Math.PI / 2 ? "none" : "inline"); }
+
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => { geoJsonMapData = topojson.feature(topology, topology.objects.countries).features; projection.rotate([-138, -36]); drawBaseMap(); });
+
   function drawBaseMap() {
     mapGroup.selectAll(".country-polygon").remove();
-    mapGroup.selectAll("path")
-      .data(geoJsonMapData)
-      .enter()
-      .append("path")
-      .attr("class", "country-polygon")
-      .attr("id", d => "poly-raw-id-" + String(Number(d.id)).padStart(3, '0'))
-      .attr("d", pathGenerator)
-      .on("click", function(event, d) {
-        if (!currentUsername) { alert("先にお名前を入力して『設定ロード』ボタンを押してください。"); return; }
-        // 304(グリーンランド)など未登録IDへの対応： numericIdが見つからない場合はIDをそのまま利用
-        let numericId = String(Number(d.id)).padStart(3, '0');
-        let master = masterCountries.find(c => c.numericId === numericId);
-        let alphaId = master ? master.id : numericId;
-        let name = master ? master.name : (numericId === "304" ? "Greenland" : "未登録の国");
-        openModal(alphaId, name);
-      });
-    drawSmallCountryPins();
-    updateMapDrawing();
+    mapGroup.selectAll("path").data(geoJsonMapData).enter().append("path").attr("class", "country-polygon").attr("id", d => "poly-raw-id-" + String(Number(d.id)).padStart(3, '0')).attr("d", pathGenerator).on("click", function(event, d) { if (!currentUsername) { alert("ロードしてください"); return; } let numericId = String(Number(d.id)).padStart(3, '0'); let master = masterCountries.find(c => c.numericId === numericId); openModal(master ? master.id : numericId, master ? master.name : (numericId === "304" ? "Greenland" : "未登録")); });
+    drawSmallCountryPins(); updateMapDrawing();
   }
 
-  // ピンの初期描画
   function drawSmallCountryPins() {
     pinGroup.selectAll(".small-country-pin").remove();
-    pinGroup.selectAll("circle")
-      .data(smallCountries)
-      .enter()
-      .append("circle")
-      .attr("class", d => "small-country-pin" + (userGlobalData[d.id] ? " " + userGlobalData[d.id].status : ""))
-      .attr("r", 1.8)
-      .style("fill", d => userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff")
-      .on("click", function(event, d) {
-         event.stopPropagation(); 
-         if (!currentUsername) { alert("先にお名前を入力して『設定ロード』ボタンを押してください。"); return; }
-         openModal(d.id, countryNameMap[d.id] || d.name);
-      });
+    pinGroup.selectAll("circle").data(smallCountries).enter().append("circle").attr("class", d => "small-country-pin" + (userGlobalData[d.id] ? " " + userGlobalData[d.id].status : "")).attr("r", 1.8).style("fill", d => userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff").on("click", function(event, d) { event.stopPropagation(); openModal(d.id, countryNameMap[d.id] || d.name); });
     updateMapDrawing();
   }
 
-  // ユーザー設定のロード
-  document.getElementById("btn-login").addEventListener("click", function() {
-    const name = document.getElementById("username-input").value.trim();
-    if (!name) { alert("お名前を入力してください"); return; }
-    currentUsername = name;
-    document.getElementById("status-display").innerText = "👤 ユーザー: " + currentUsername + " さん";
-    fetchUserData();
-  });
-
-  function fetchUserData() {
-    fetch(GAS_API_URL + "?username=" + encodeURIComponent(currentUsername))
-      .then(res => res.json())
-      .then(data => {
-        masterCountries = data.countryMaster || [];
-        countryNameMap = masterCountries.reduce((acc, c) => ({...acc, [c.id]: c.name}), {});
-        userGlobalData = data.userVisits || {};
-        buildFooterFlags(); 
-        applyDataToUI();
-      });
-  }
-
-  // 地図とリストの更新
-  function applyDataToUI() {
-    mapGroup.selectAll(".country-polygon").style("fill", d => {
-       let numericId = String(Number(d.id)).padStart(3, '0');
-       let master = masterCountries.find(c => c.numericId === numericId);
-       let id = master ? master.id : numericId;
-       return userGlobalData[id] ? (userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id)) : "#ffffff";
-    });
-    
-    const listDiv = document.getElementById("data-list");
-    listDiv.innerHTML = "";
-    Object.keys(userGlobalData).forEach(id => {
-      const item = document.createElement("div");
-      item.className = "list-item";
-      let flagCode = id.toLowerCase().replace('us-hi','us');
-      item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${flagCode}.png')"></div>
-                        <span class="${userGlobalData[id].status === "resident" ? "tag-resident" : "tag-visited"}">${userGlobalData[id].status === "resident" ? "在住" : "訪問"}</span>
-                        <span>${countryNameMap[id] || id} (${userGlobalData[id].years})</span>`;
-      listDiv.appendChild(item);
-    });
-  }
-
-  // ソートとフッター生成
-  function changeSortMode(mode) {
-    currentSortMode = mode;
-    document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav');
-    document.getElementById("sort-btn-alpha").classList.toggle("active", mode === 'alpha');
-    buildFooterFlags();
-  }
-
-  function buildFooterFlags() {
-    const scrollBox = document.getElementById("flag-scroll-box");
-    scrollBox.innerHTML = "";
-    let sorted = [...masterCountries].sort((a,b) => currentSortMode === 'fav' ? ((userGlobalData[b.id]?1:0) - (userGlobalData[a.id]?1:0)) : a.id.localeCompare(b.id));
-    sorted.forEach(c => {
-      const card = document.createElement("div");
-      card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : "");
-      card.onclick = () => openModal(c.id, c.name);
-      card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase().replace('us-hi','us')}.png')"></div>
-                        <div class="flag-name">${c.name}</div>`;
-      scrollBox.appendChild(card);
-    });
-  }
-
-  function openModal(id, name) {
-    selectedId = id.toUpperCase();
-    document.getElementById("modal-title").innerText = name;
-    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().replace('us-hi','us')}.png')`;
-    document.getElementById("status-select").value = userGlobalData[id]?.status || "visited";
-    document.getElementById("years-input").value = userGlobalData[id]?.years || "";
-    document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block";
-  }
-
-  function closeModal() {
-    document.getElementById("modal").style.display = "none";
-    document.getElementById("overlay").style.display = "none";
-  }
-
-  document.getElementById("btn-save").addEventListener("click", function() {
-    const status = document.getElementById("status-select").value;
-    const years = document.getElementById("years-input").value.trim() || "不明";
-    userGlobalData[selectedId] = { status, years };
-    applyDataToUI();
-    closeModal();
-    fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status, years }) }).then(() => fetchUserData());
-  });
-
-  document.getElementById("btn-delete").addEventListener("click", function() {
-    delete userGlobalData[selectedId];
-    applyDataToUI();
-    closeModal();
-    fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "delete", username: currentUsername, regionId: selectedId }) }).then(() => fetchUserData());
-  });
-
+  document.getElementById("btn-login").addEventListener("click", function() { currentUsername = document.getElementById("username-input").value.trim(); if (!currentUsername) return; fetchUserData(); });
+  function fetchUserData() { fetch(GAS_API_URL + "?username=" + encodeURIComponent(currentUsername)).then(res => res.json()).then(data => { masterCountries = data.countryMaster || []; countryNameMap = masterCountries.reduce((acc, c) => ({...acc, [c.id]: c.name}), {}); userGlobalData = data.userVisits || {}; buildFooterFlags(); applyDataToUI(); }); }
+  function applyDataToUI() { mapGroup.selectAll(".country-polygon").style("fill", d => { let numericId = String(Number(d.id)).padStart(3, '0'); let master = masterCountries.find(c => c.numericId === numericId); let id = master ? master.id : numericId; return userGlobalData[id] ? (userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id)) : "#ffffff"; }); const listDiv = document.getElementById("data-list"); listDiv.innerHTML = ""; Object.keys(userGlobalData).forEach(id => { const item = document.createElement("div"); item.className = "list-item"; let flag = id.toLowerCase().replace('us-hi','us'); item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${flag}.png')"></div><span class="${userGlobalData[id].status === "resident" ? "tag-resident" : "tag-visited"}">${userGlobalData[id].status === "resident" ? "在住" : "訪問"}</span><span>${countryNameMap[id] || id} (${userGlobalData[id].years})</span>`; listDiv.appendChild(item); }); }
+  function changeSortMode(mode) { currentSortMode = mode; document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav'); document.getElementById("sort-btn-alpha").classList.toggle("active", mode === 'alpha'); buildFooterFlags(); }
+  function buildFooterFlags() { const scrollBox = document.getElementById("flag-scroll-box"); scrollBox.innerHTML = ""; let sorted = [...masterCountries].sort((a,b) => currentSortMode === 'fav' ? ((userGlobalData[b.id]?1:0) - (userGlobalData[a.id]?1:0)) : a.id.localeCompare(b.id)); sorted.forEach(c => { const card = document.createElement("div"); card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : ""); card.onclick = () => openModal(c.id, c.name); card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase().replace('us-hi','us')}.png')"></div><div class="flag-name">${c.name}</div>`; scrollBox.appendChild(card); }); }
+  function openModal(id, name) { selectedId = id.toUpperCase(); document.getElementById("modal-title").innerText = name; document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().replace('us-hi','us')}.png')`; document.getElementById("status-select").value = userGlobalData[id]?.status || "visited"; document.getElementById("years-input").value = userGlobalData[id]?.years || ""; document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block"; }
+  function closeModal() { document.getElementById("modal").style.display = "none"; document.getElementById("overlay").style.display = "none"; }
+  document.getElementById("btn-save").addEventListener("click", function() { const status = document.getElementById("status-select").value, years = document.getElementById("years-input").value.trim() || "不明"; userGlobalData[selectedId] = { status, years }; applyDataToUI(); closeModal(); fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status, years }) }).then(() => fetchUserData()); });
+  document.getElementById("btn-delete").addEventListener("click", function() { delete userGlobalData[selectedId]; applyDataToUI(); closeModal(); fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "delete", username: currentUsername, regionId: selectedId }) }).then(() => fetchUserData()); });
   document.getElementById("btn-cancel").addEventListener("click", closeModal);
   document.getElementById("overlay").addEventListener("click", closeModal);
 </script>
