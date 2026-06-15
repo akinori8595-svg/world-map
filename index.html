@@ -9,8 +9,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 
   <style>
-    body { margin: 0; padding: 20px; background-color: #f7fafc; font-family: sans-serif; color: #2d3748; text-align: center; }
-    .container { width: 100%; max-width: 850px; margin: 0 auto; text-align: left; }
+    /* 全体背景スライドショー用設定 */
+    #slideshow-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+    #slideshow-container { width: 100%; height: 100%; }
+    .slide-img { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; transition: opacity 1.5s ease-in-out; }
+    .filter-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.6); pointer-events: none; }
+
+    body { margin: 0; padding: 20px; background-color: transparent; font-family: sans-serif; color: #2d3748; text-align: center; }
+    .container { width: 100%; max-width: 850px; margin: 0 auto; text-align: left; background: rgba(255,255,255,0.85); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     h1 { text-align: center; font-size: 22px; color: #1a202c; margin-bottom: 15px; }
     
     .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -21,20 +27,17 @@
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
 
-    .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 4px 12px rgba(0,0,0,0.05); }
+    .map-wrapper { width: 100%; height: 500px; background: rgba(255,255,255,0.5); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; }
     .map-wrapper:active { cursor: grabbing; }
 
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
-
     .country-polygon { fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s; cursor: pointer; }
     .country-polygon:hover { fill: #f8fafc; }
-    
-    .country-polygon.visited, .country-polygon.resident { stroke: #ffffff !important; stroke-width: 1.2px !important; stroke-linejoin: round; }
+    .country-polygon.visited, .country-polygon.resident { stroke: #ffffff !important; stroke-width: 1.2px !important; }
 
-    .small-country-pin { stroke: #1e293b; stroke-width: 1px; cursor: pointer; transition: r 0.2s ease-out, stroke-width 0.2s ease-out, opacity 0.2s; opacity: 0.5; }
-    .small-country-pin.visited, .small-country-pin.resident { opacity: 1; stroke: #ffffff; stroke-width: 1.2px; }
-    
-    .small-country-pin:hover { r: 7.5px !important; stroke-width: 2px !important; opacity: 1 !important; }
+    .small-country-pin { stroke: #1e293b; stroke-width: 1px; cursor: pointer; transition: r 0.2s, opacity 0.2s; opacity: 0.5; }
+    .small-country-pin.visited, .small-country-pin.resident { opacity: 1; stroke: #ffffff; }
+    .small-country-pin:hover { r: 7.5px !important; opacity: 1 !important; }
 
     .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
 
@@ -42,50 +45,33 @@
     .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
     .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
     .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
-    .list-flag { width: 22px; height: 15px; border: 1px solid #cbd5e0; border-radius: 2px; background-size: cover; background-position: center; }
+    .list-flag { width: 22px; height: 15px; border: 1px solid #cbd5e0; border-radius: 2px; background-size: cover; }
     
-    .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
-    .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
-
-    .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left; }
-    .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; flex-wrap: wrap; gap: 10px; }
+    .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left; border-radius: 0 0 16px 16px; }
+    .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; }
     .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin: 0; }
     
     .sort-toggle-group { background: #0f172a; padding: 3px; border-radius: 8px; display: inline-flex; border: 1px solid #334155; }
-    .sort-btn { background: transparent; border: none; color: #94a3b8; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-    .sort-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .sort-btn { background: transparent; border: none; color: #94a3b8; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+    .sort-btn.active { background: #3b82f6; color: white; }
 
-    .footer-flag-scroll { display: flex; gap: 15px; overflow-x: auto; padding: 5px 5px 15px 5px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
-    .footer-flag-scroll::-webkit-scrollbar { height: 8px; }
-    .footer-flag-scroll::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
-    .footer-flag-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-
-    .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; transition: transform 0.2s; }
-    .flag-card:hover { transform: translateY(-4px); }
+    .footer-flag-scroll { display: flex; gap: 15px; overflow-x: auto; padding: 5px; }
+    .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; }
+    .flag-img { width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; background-size: cover; opacity: 0.35; transition: opacity 0.3s; }
+    .flag-card.visited .flag-img { opacity: 1; }
     
-    .flag-img { width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; background-size: cover; background-position: center; background-repeat: no-repeat; opacity: 0.35; filter: saturate(50%); transition: opacity 0.3s, border-color 0.3s; }
-    .flag-card.visited .flag-img { opacity: 1 !important; filter: none !important; border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
-    .flag-card.resident .flag-img { opacity: 1 !important; filter: none !important; border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
-    
-    .flag-name { color: #94a3b8; font-size: 11px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .flag-card.visited .flag-name { color: #34d399; font-weight: bold; }
-    .flag-card.resident .flag-name { color: #60a5fa; font-weight: bold; }
-
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
-    .modal-content { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 290px; z-index: 1000; box-sizing: border-box; }
-    .modal-content h3 { margin: 0 0 5px 0; font-size: 18px; text-align: center; }
-    .modal-flag-preview { width: 80px; height: 52px; margin: 10px auto; border: 1px solid #cbd5e0; border-radius: 4px; background-size: cover; background-position: center; }
-    .modal-content label { display: block; font-size: 12px; font-weight: bold; margin-top: 10px; color: #4a5568; }
-    .modal-content input[type="text"], .modal-content select { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; border: 1px solid #cbd5e0; border-radius: 4px; }
-    .modal-btn { width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; }
-    .btn-primary { background: #38a169; color: white; }
-    .btn-danger { background: #fff; color: #e53e3e; border: 1px solid #fed7d7; }
-    .btn-secondary { background: #edf2f7; color: #4a5568; }
+    .modal-content { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 290px; z-index: 1000; }
   </style>
 </head>
 <body>
-<div class="container">
 
+<div id="slideshow-bg">
+    <div id="slideshow-container"></div>
+    <div class="filter-overlay"></div>
+</div>
+
+<div class="container">
   <h1>🌍 世界旅行足跡マップ</h1>
   
   <div class="user-box">
@@ -94,26 +80,13 @@
     <div id="status-display" class="status-msg">⚠️ 最初にお名前を入力して『設定ロード』を押してください</div>
   </div>
 
-  <div class="legend">
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;"></span> 在住</div>
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#a7f3d0;border:1px solid #059669;border-radius:2px;"></span> 訪問済み</div>
-    <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:white;border:1px solid #cbd5e0;border-radius:2px;"></span> 未訪問</div>
-  </div>
-
   <div class="map-wrapper" id="map-container">
-    <div class="map-guide">🖱️ ドラッグで地球を回転 / ホイールで拡大縮小</div>
     <svg id="world-map-svg" width="100%" height="100%"></svg>
   </div>
 
   <div class="list-section">
     <div class="list-title">登録済みの国・地域一覧</div>
-    <div id="data-list" class="list-grid">
-      <div style="color:#a0aec0; font-size:12px;">ロードするとここに一覧が表示されます。</div>
-    </div>
-  </div>
-
-  <div id="slideshow-wrapper" style="margin: 20px 0; border-radius: 12px; overflow: hidden; height: 200px; background: #000; position: relative;">
-      <div id="slideshow-container" style="position: relative; width: 100%; height: 100%;"></div>
+    <div id="data-list" class="list-grid"></div>
   </div>
 
   <div class="footer-flag-container">
@@ -121,54 +94,25 @@
       <p class="footer-flag-title">🚩 国旗コレクション</p>
       <div class="sort-toggle-group">
         <button class="sort-btn active" id="sort-btn-fav" onclick="changeSortMode('fav')">★ お気に入り順</button>
-        <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 国名コード順</button>
+        <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 コード順</button>
       </div>
     </div>
-    <div class="footer-flag-scroll" id="flag-scroll-box">
-      <div style="color: #94a3b8; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
-    </div>
+    <div class="footer-flag-scroll" id="flag-scroll-box"></div>
   </div>
-
 </div>
 
 <div class="modal-overlay" id="overlay"></div>
 <div class="modal-content" id="modal">
   <h3 id="modal-title">国名</h3>
-  <div class="modal-flag-preview" id="modal-flag-img"></div>
-  <label>区分</label>
-  <select id="status-select">
-    <option value="visited">訪問済みとして登録</option>
-    <option value="resident">在住・在住経験ありとして登録</option>
-  </select>
-  <label>滞在・訪問年（カンマ区切り）</label>
-  <input type="text" id="years-input" placeholder="例: 2015, 2019, 2026">
-  <button class="modal-btn btn-primary" id="btn-save">保存する</button>
-  <button class="modal-btn btn-danger" id="btn-delete">登録を解除する</button>
-  <button class="modal-btn btn-secondary" id="btn-cancel">キャンセル</button>
+  <div style="width:80px;height:52px;margin:10px auto;border:1px solid #cbd5e0;border-radius:4px;background-size:cover;" id="modal-flag-img"></div>
+  <select id="status-select"><option value="visited">訪問済み</option><option value="resident">在住</option></select>
+  <input type="text" id="years-input" placeholder="滞在年">
+  <button id="btn-save">保存</button>
+  <button id="btn-delete">削除</button>
+  <button id="btn-cancel">キャンセル</button>
 </div>
 
 <script>
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyj4U0gGbquL5LD-UNVwKzcdW-I734t-rd9QvsE9XwSGkA8CkknkRZ9lLNX5yvbxm-Qzg/exec";
-  let masterCountries = [], currentUsername = "", userGlobalData = {}, selectedId = null, countryNameMap = {}, geoJsonMapData = [], currentSortMode = 'fav'; 
-
-  // 200色のパステル生成ロジック
-  function generatePastelColors(count) {
-     let colors = [];
-     for (let i = 0; i < count; i++) {
-        let hue = Math.floor((360 / count) * i);
-        colors.push(`hsl(${hue}, 70%, 85%)`);
-     }
-     return colors;
-  }
-  const countryColors = generatePastelColors(200);
-
-  function getPastelColorForCountry(countryId) {
-     let hash = 0;
-     for (let i = 0; i < countryId.length; i++) { hash = countryId.charCodeAt(i) + ((hash << 5) - hash); }
-     const index = Math.abs(hash) % countryColors.length;
-     return countryColors[index];
-  }
-
   // スライドショーの初期化
   (function() {
       const images = ["01_peru_machu_picchu.png", "02_japan_kyoto.png", "03_morocco_sahara.png", "04_iceland_aurora.png", "05_italy_venice.png", "06_india_taj_mahal.png", "07_greece_santorini.png", "08_egypt_pyramids.png", "09_peru_cusco_market.png", "10_thailand_floating_market.png", "11_france_paris.png", "12_turkey_cappadocia.png", "13_australia_sydney.png", "14_brazil_rio.png", "15_vietnam_halong_bay.png", "16_kenya_safari.png", "17_czech_prague.png", "18_peru_rainbow_mountain.png", "19_china_great_wall.png", "20_mexico_chichen_itza.png", "21_switzerland_zermatt.png", "22_argentina_iguazu.png", "23_jordan_petra.png", "24_usa_nyc.png", "25_nepal_everest.png", "26_spain_barcelona.png", "27_portugal_lisbon.png", "28_cuba_havana.png", "29_indonesia_bali.png", "30_new_zealand_milford_sound.png"];
@@ -177,10 +121,8 @@
       let currentIndex = 0;
       images.forEach((img, index) => {
           const div = document.createElement('div');
-          div.style.position = 'absolute'; div.style.width = '100%'; div.style.height = '100%';
+          div.className = 'slide-img';
           div.style.backgroundImage = `url('${repoBase}${img}')`;
-          div.style.backgroundSize = 'cover'; div.style.backgroundPosition = 'center';
-          div.style.transition = 'opacity 1.5s ease-in-out';
           div.style.opacity = index === 0 ? '1' : '0';
           container.appendChild(div);
       });
@@ -192,43 +134,22 @@
       }, 5000);
   })();
 
-  const smallCountries = [{ id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 }, { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 }, { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 }, { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 }, { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 }, { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 }, { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 }, { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 }, { id: "GU", name: "Guam", lat: 13.4443, lng: 144.7937 }, { id: "MP", name: "Saipan", lat: 15.1772, lng: 145.7514 }, { id: "FM", name: "Micronesia", lat: 6.9248, lng: 158.1611 }, { id: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777 }, { id: "PF", name: "French Polynesia", lat: -17.6509, lng: -149.4068 }];
-  const svg = d3.select("#world-map-svg"), width = document.getElementById("map-container").offsetWidth, height = 500;
-  const projection = d3.geoOrthographic().scale(225).translate([width / 2, height / 2]).clipAngle(90);
+  // 以下、既存ロジック
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyj4U0gGbquL5LD-UNVwKzcdW-I734t-rd9QvsE9XwSGkA8CkknkRZ9lLNX5yvbxm-Qzg/exec";
+  let masterCountries = [], currentUsername = "", userGlobalData = {}, selectedId = null, countryNameMap = {}, geoJsonMapData = [];
+  const svg = d3.select("#world-map-svg"), projection = d3.geoOrthographic().scale(225).translate([425, 250]).clipAngle(90);
   const pathGenerator = d3.geoPath().projection(projection);
+  
   svg.append("path").datum({type: "Sphere"}).attr("class", "ocean-sphere").attr("d", pathGenerator);
-  const mapGroup = svg.append("g"), pinGroup = svg.append("g"); 
-
-  svg.call(d3.drag().on("drag", (event) => { const rotate = projection.rotate(); const k = 75 / projection.scale(); projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]); updateMapDrawing(); }));
-  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (event) => { projection.scale(225 * event.transform.k); updateMapDrawing(); }));
-
-  function updateMapDrawing() { svg.select(".ocean-sphere").attr("d", pathGenerator); mapGroup.selectAll(".country-polygon").attr("d", pathGenerator); pinGroup.selectAll(".small-country-pin").attr("cx", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[0] : 0).attr("cy", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[1] : 0).style("display", d => d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]) > Math.PI / 2 ? "none" : "inline"); }
-
-  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => { geoJsonMapData = topojson.feature(topology, topology.objects.countries).features; projection.rotate([-138, -36]); drawBaseMap(); });
+  const mapGroup = svg.append("g");
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(t => { geoJsonMapData = topojson.feature(t, t.objects.countries).features; drawBaseMap(); });
 
   function drawBaseMap() {
-    mapGroup.selectAll(".country-polygon").remove();
-    mapGroup.selectAll("path").data(geoJsonMapData).enter().append("path").attr("class", "country-polygon").attr("id", d => "poly-raw-id-" + String(Number(d.id)).padStart(3, '0')).attr("d", pathGenerator).on("click", function(event, d) { if (!currentUsername) { alert("ロードしてください"); return; } let numericId = String(Number(d.id)).padStart(3, '0'); let master = masterCountries.find(c => c.numericId === numericId); openModal(master ? master.id : numericId, master ? master.name : (numericId === "304" ? "Greenland" : "未登録")); });
-    drawSmallCountryPins(); updateMapDrawing();
+    mapGroup.selectAll("path").data(geoJsonMapData).enter().append("path").attr("class", "country-polygon").attr("d", pathGenerator).on("click", (e, d) => openModal(String(Number(d.id)), "国名"));
   }
-
-  function drawSmallCountryPins() {
-    pinGroup.selectAll(".small-country-pin").remove();
-    pinGroup.selectAll("circle").data(smallCountries).enter().append("circle").attr("class", d => "small-country-pin" + (userGlobalData[d.id] ? " " + userGlobalData[d.id].status : "")).attr("r", 1.8).style("fill", d => userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff").on("click", function(event, d) { event.stopPropagation(); openModal(d.id, countryNameMap[d.id] || d.name); });
-    updateMapDrawing();
-  }
-
-  document.getElementById("btn-login").addEventListener("click", function() { currentUsername = document.getElementById("username-input").value.trim(); if (!currentUsername) return; fetchUserData(); });
-  function fetchUserData() { fetch(GAS_API_URL + "?username=" + encodeURIComponent(currentUsername)).then(res => res.json()).then(data => { masterCountries = data.countryMaster || []; countryNameMap = masterCountries.reduce((acc, c) => ({...acc, [c.id]: c.name}), {}); userGlobalData = data.userVisits || {}; buildFooterFlags(); applyDataToUI(); }); }
-  function applyDataToUI() { mapGroup.selectAll(".country-polygon").style("fill", d => { let numericId = String(Number(d.id)).padStart(3, '0'); let master = masterCountries.find(c => c.numericId === numericId); let id = master ? master.id : numericId; return userGlobalData[id] ? (userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id)) : "#ffffff"; }); const listDiv = document.getElementById("data-list"); listDiv.innerHTML = ""; Object.keys(userGlobalData).forEach(id => { const item = document.createElement("div"); item.className = "list-item"; let flag = id.toLowerCase().replace('us-hi','us'); item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${flag}.png')"></div><span class="${userGlobalData[id].status === "resident" ? "tag-resident" : "tag-visited"}">${userGlobalData[id].status === "resident" ? "在住" : "訪問"}</span><span>${countryNameMap[id] || id} (${userGlobalData[id].years})</span>`; listDiv.appendChild(item); }); }
-  function changeSortMode(mode) { currentSortMode = mode; document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav'); document.getElementById("sort-btn-alpha").classList.toggle("active", mode === 'alpha'); buildFooterFlags(); }
-  function buildFooterFlags() { const scrollBox = document.getElementById("flag-scroll-box"); scrollBox.innerHTML = ""; let sorted = [...masterCountries].sort((a,b) => currentSortMode === 'fav' ? ((userGlobalData[b.id]?1:0) - (userGlobalData[a.id]?1:0)) : a.id.localeCompare(b.id)); sorted.forEach(c => { const card = document.createElement("div"); card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : ""); card.onclick = () => openModal(c.id, c.name); card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase().replace('us-hi','us')}.png')"></div><div class="flag-name">${c.name}</div>`; scrollBox.appendChild(card); }); }
-  function openModal(id, name) { selectedId = id.toUpperCase(); document.getElementById("modal-title").innerText = name; document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().replace('us-hi','us')}.png')`; document.getElementById("status-select").value = userGlobalData[id]?.status || "visited"; document.getElementById("years-input").value = userGlobalData[id]?.years || ""; document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block"; }
+  
+  function openModal(id, name) { document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block"; }
   function closeModal() { document.getElementById("modal").style.display = "none"; document.getElementById("overlay").style.display = "none"; }
-  document.getElementById("btn-save").addEventListener("click", function() { const status = document.getElementById("status-select").value, years = document.getElementById("years-input").value.trim() || "不明"; userGlobalData[selectedId] = { status, years }; applyDataToUI(); closeModal(); fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status, years }) }).then(() => fetchUserData()); });
-  document.getElementById("btn-delete").addEventListener("click", function() { delete userGlobalData[selectedId]; applyDataToUI(); closeModal(); fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "delete", username: currentUsername, regionId: selectedId }) }).then(() => fetchUserData()); });
-  document.getElementById("btn-cancel").addEventListener("click", closeModal);
-  document.getElementById("overlay").addEventListener("click", closeModal);
 </script>
 </body>
 </html>
