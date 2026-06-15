@@ -163,11 +163,10 @@
   let geoJsonMapData = []; 
   let currentSortMode = 'fav'; 
 
-  // 🎨 200色のパステルカラーを自動生成
+  // 🎨 200色のパステルカラーを自動生成（HSL色相環を利用）
   function generatePastelColors(count) {
      let colors = [];
      for (let i = 0; i < count; i++) {
-        // 色相を均等に割り当て、彩度・明度をパステル調に固定
         let hue = Math.floor((360 / count) * i);
         colors.push(`hsl(${hue}, 70%, 85%)`);
      }
@@ -238,6 +237,7 @@
   function updateMapDrawing() {
     svg.select(".ocean-sphere").attr("d", pathGenerator);
     mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
+    
     // ピンの座標を更新して再描画
     pinGroup.selectAll(".small-country-pin")
       .attr("cx", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[0] : 0)
@@ -267,8 +267,12 @@
       .attr("d", pathGenerator)
       .on("click", function(event, d) {
         if (!currentUsername) { alert("先にお名前を入力して『設定ロード』ボタンを押してください。"); return; }
-        let alphaId = masterCountries.find(c => c.numericId === String(Number(d.id)).padStart(3, '0'))?.id || String(Number(d.id));
-        openModal(alphaId, countryNameMap[alphaId] || "未登録の国");
+        // 304(グリーンランド)など未登録IDへの対応： numericIdが見つからない場合はIDをそのまま利用
+        let numericId = String(Number(d.id)).padStart(3, '0');
+        let master = masterCountries.find(c => c.numericId === numericId);
+        let alphaId = master ? master.id : numericId;
+        let name = master ? master.name : (numericId === "304" ? "Greenland" : "未登録の国");
+        openModal(alphaId, name);
       });
     drawSmallCountryPins();
     updateMapDrawing();
@@ -316,7 +320,9 @@
   // 地図とリストの更新
   function applyDataToUI() {
     mapGroup.selectAll(".country-polygon").style("fill", d => {
-       let id = masterCountries.find(c => c.numericId === String(Number(d.id)).padStart(3, '0'))?.id;
+       let numericId = String(Number(d.id)).padStart(3, '0');
+       let master = masterCountries.find(c => c.numericId === numericId);
+       let id = master ? master.id : numericId;
        return userGlobalData[id] ? (userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id)) : "#ffffff";
     });
     
