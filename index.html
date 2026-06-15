@@ -9,109 +9,52 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 
   <style>
-    body {
-      margin: 0; padding: 20px; background-color: #f7fafc;
-      font-family: sans-serif; color: #2d3748; text-align: center;
-    }
+    body { margin: 0; padding: 20px; background-color: #f7fafc; font-family: sans-serif; color: #2d3748; text-align: center; }
     .container { width: 100%; max-width: 850px; margin: 0 auto; text-align: left; }
     h1 { text-align: center; font-size: 22px; color: #1a202c; margin-bottom: 15px; }
-    
-    /* フィルタータブの追加スタイル */
-    .filter-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-    .filter-btn { padding: 8px 16px; border-radius: 20px; border: 1px solid #cbd5e0; background: white; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
-    .filter-btn.active { background: #4299e1; color: white; border-color: #4299e1; }
-
     .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .user-box input { width: 60%; padding: 10px; font-size: 15px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; }
     .user-box button { width: 35%; padding: 10px; font-size: 15px; background: #4299e1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; float: right; }
     .status-msg { margin-top: 8px; font-size: 13px; font-weight: bold; color: #e53e3e; }
-
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
-
-    .map-wrapper {
-      width: 100%; height: 500px; 
-      background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%);
-      border: 1px solid #bae6fd; border-radius: 16px; position: relative;
-      overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 4px 12px rgba(0,0,0,0.05);
-    }
+    .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 4px 12px rgba(0,0,0,0.05); }
     .map-wrapper:active { cursor: grabbing; }
-
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
-
-    .country-polygon {
-      fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s, opacity 0.3s; cursor: pointer;
-    }
+    .country-polygon { fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s; cursor: pointer; }
     .country-polygon:hover { fill: #f8fafc; }
-    
-    .country-polygon.visited, .country-polygon.resident { 
-      stroke: #ffffff !important; 
-      stroke-width: 1.2px !important; 
-      stroke-linejoin: round;
-    }
-
-    .small-country-pin {
-      stroke: #1e293b; stroke-width: 1px; cursor: pointer; 
-      transition: r 0.2s ease-out, stroke-width 0.2s ease-out, opacity 0.3s;
-      opacity: 0.5;
-    }
+    .country-polygon.visited, .country-polygon.resident { stroke: #ffffff !important; stroke-width: 1.2px !important; stroke-linejoin: round; }
+    .small-country-pin { stroke: #1e293b; stroke-width: 1px; cursor: pointer; transition: r 0.2s ease-out, stroke-width 0.2s ease-out, opacity 0.2s; opacity: 0.5; }
     .small-country-pin.visited, .small-country-pin.resident { opacity: 1; stroke: #ffffff; stroke-width: 1.2px; }
-    
-    .small-country-pin:hover { 
-      r: 7.5px !important; 
-      stroke-width: 2px !important; 
-      opacity: 1 !important;
-    }
-
+    .small-country-pin:hover { r: 7.5px !important; stroke-width: 2px !important; opacity: 1 !important; }
     .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
-
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 25px; }
     .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
     .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
     .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
     .list-flag { width: 22px; height: 15px; border: 1px solid #cbd5e0; border-radius: 2px; background-size: cover; background-position: center; }
-    
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
     .tag-visited { background: #10b981; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
-
-    .footer-flag-container {
-      background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left;
-    }
+    .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left; }
     .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; flex-wrap: wrap; gap: 10px; }
     .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin: 0; }
-    
     .sort-toggle-group { background: #0f172a; padding: 3px; border-radius: 8px; display: inline-flex; border: 1px solid #334155; }
     .sort-btn { background: transparent; border: none; color: #94a3b8; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
     .sort-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-
-    .footer-flag-scroll {
-      display: flex; gap: 15px; overflow-x: auto; padding: 5px 5px 15px 5px;
-      scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
-    }
+    .footer-flag-scroll { display: flex; gap: 15px; overflow-x: auto; padding: 5px 5px 15px 5px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
     .footer-flag-scroll::-webkit-scrollbar { height: 8px; }
     .footer-flag-scroll::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
     .footer-flag-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-
     .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; transition: transform 0.2s; }
     .flag-card:hover { transform: translateY(-4px); }
-    
-    .flag-img {
-      width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box;
-      background-size: cover; background-position: center; background-repeat: no-repeat;
-      opacity: 0.35; filter: saturate(50%); transition: opacity 0.3s, border-color 0.3s;
-    }
+    .flag-img { width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; background-size: cover; background-position: center; background-repeat: no-repeat; opacity: 0.35; filter: saturate(50%); transition: opacity 0.3s, border-color 0.3s; }
     .flag-card.visited .flag-img { opacity: 1 !important; filter: none !important; border-color: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
     .flag-card.resident .flag-img { opacity: 1 !important; filter: none !important; border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
-    
     .flag-name { color: #94a3b8; font-size: 11px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .flag-card.visited .flag-name { color: #34d399; font-weight: bold; }
     .flag-card.resident .flag-name { color: #60a5fa; font-weight: bold; }
-
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
-    .modal-content {
-      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: white; padding: 20px; border-radius: 12px; width: 290px; z-index: 1000; box-sizing: border-box;
-    }
+    .modal-content { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 290px; z-index: 1000; box-sizing: border-box; }
     .modal-content h3 { margin: 0 0 5px 0; font-size: 18px; text-align: center; }
     .modal-flag-preview { width: 80px; height: 52px; margin: 10px auto; border: 1px solid #cbd5e0; border-radius: 4px; background-size: cover; background-position: center; }
     .modal-content label { display: block; font-size: 12px; font-weight: bold; margin-top: 10px; color: #4a5568; }
@@ -124,39 +67,25 @@
 </head>
 <body>
 <div class="container">
-
   <h1>🌍 世界旅行足跡マップ</h1>
-  
   <div class="user-box">
     <input type="text" id="username-input" placeholder="お名前を入力（例: Aki）">
     <button id="btn-login">設定ロード</button>
     <div id="status-display" class="status-msg">⚠️ 最初にお名前を入力して「設定ロード」を押してください</div>
   </div>
-
-  <div class="filter-tabs">
-    <button class="filter-btn active" onclick="applyFilter('all')">全部表示</button>
-    <button class="filter-btn" onclick="applyFilter('resident')">在住のみ</button>
-    <button class="filter-btn" onclick="applyFilter('visited')">訪問済みのみ</button>
-  </div>
-
   <div class="legend">
     <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;"></span> 在住</div>
     <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:#a7f3d0;border:1px solid #059669;border-radius:2px;"></span> 訪問済み</div>
     <div class="legend-item"><span style="display:inline-block;width:12px;height:12px;background:white;border:1px solid #cbd5e0;border-radius:2px;"></span> 未訪問</div>
   </div>
-
   <div class="map-wrapper" id="map-container">
     <div class="map-guide">🖱️ ドラッグで地球を回転 / ホイールで拡大縮小</div>
     <svg id="world-map-svg" width="100%" height="100%"></svg>
   </div>
-
   <div class="list-section">
     <div class="list-title">登録済みの国・地域一覧</div>
-    <div id="data-list" class="list-grid">
-      <div style="color:#a0aec0; font-size:12px;">ロードするとここに一覧が表示されます。</div>
-    </div>
+    <div id="data-list" class="list-grid"></div>
   </div>
-
   <div class="footer-flag-container">
     <div class="footer-flag-title-row">
       <p class="footer-flag-title">🚩 国旗コレクション</p>
@@ -165,18 +94,14 @@
         <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 国名コード順</button>
       </div>
     </div>
-    <div class="footer-flag-scroll" id="flag-scroll-box">
-      <div style="color: #94a3b8; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
-    </div>
+    <div class="footer-flag-scroll" id="flag-scroll-box"></div>
   </div>
-
 </div>
 
 <div class="modal-overlay" id="overlay"></div>
 <div class="modal-content" id="modal">
   <h3 id="modal-title">国名</h3>
   <div class="modal-flag-preview" id="modal-flag-img"></div>
-  
   <div id="region-selector-wrapper" style="display:none;">
     <label>詳細地域</label>
     <select id="region-sub-select">
@@ -184,7 +109,6 @@
       <option value="US-HI">ハワイ諸島</option>
     </select>
   </div>
-
   <label>区分</label>
   <select id="status-select">
     <option value="visited">訪問済みとして登録</option>
@@ -198,85 +122,42 @@
 </div>
 
 <script>
+  // 共通設定：Google Apps ScriptのエンドポイントURL
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyj4U0gGbquL5LD-UNVwKzcdW-I734t-rd9QvsE9XwSGkA8CkknkRZ9lLNX5yvbxm-Qzg/exec";
 
-  let masterCountries = []; 
-  let currentUsername = "";
-  let userGlobalData = {}; 
-  let selectedId = null;
-  let countryNameMap = {}; 
-  let geoJsonMapData = []; 
-  let currentSortMode = 'fav'; 
-  let currentFilter = 'all'; // フィルタリング状態保持
+  // グローバル変数
+  let masterCountries = [], currentUsername = "", userGlobalData = {}, selectedId = null, countryNameMap = {}, geoJsonMapData = [], currentSortMode = 'fav'; 
 
-  const pastelColors = [
-    "#fca5a5", "#fdba74", "#fcd34d", "#fde047", "#a7f3d0", "#86efac", "#67e8f9", "#7dd3fc",
-    "#93c5fd", "#a5b4fc", "#c084fc", "#f472b6", "#fda4af", "#e2e8f0", "#cbd5e1", "#fbcfe8",
-    "#f59e0b", "#10b981", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#06b6d4"
-  ];
+  // 24色のパレット配列
+  const pastelColors = ["#fca5a5", "#fdba74", "#fcd34d", "#fde047", "#a7f3d0", "#86efac", "#67e8f9", "#7dd3fc", "#93c5fd", "#a5b4fc", "#c084fc", "#f472b6", "#fda4af", "#e2e8f0", "#cbd5e1", "#fbcfe8", "#f59e0b", "#10b981", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#06b6d4"];
+  function getPastelColorForCountry(countryId) { let hash = 0; for (let i = 0; i < countryId.length; i++) { hash = countryId.charCodeAt(i) + ((hash << 5) - hash); } return pastelColors[Math.abs(hash) % pastelColors.length]; }
 
-  function getPastelColorForCountry(countryId) {
-     let hash = 0;
-     for (let i = 0; i < countryId.length; i++) { hash = countryId.charCodeAt(i) + ((hash << 5) - hash); }
-     return pastelColors[Math.abs(hash) % pastelColors.length];
-  }
+  // 小さな国の座標データ
+  const smallCountries = [{ id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 }, { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 }, { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 }, { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 }, { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 }, { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 }, { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 }, { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 }, { id: "GU", name: "Guam", lat: 13.4443, lng: 144.7937 }, { id: "MP", name: "Saipan", lat: 15.1772, lng: 145.7514 }, { id: "FM", name: "Micronesia", lat: 6.9248, lng: 158.1611 }, { id: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777 }, { id: "PF", name: "French Polynesia", lat: -17.6509, lng: -149.4068 }];
 
-  const smallCountries = [
-    { id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 },
-    { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 },
-    { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 },
-    { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 },
-    { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 },
-    { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 },
-    { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 },
-    { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 },
-    { id: "GU", name: "Guam", lat: 13.4443, lng: 144.7937 },
-    { id: "MP", name: "Saipan", lat: 15.1772, lng: 145.7514 },
-    { id: "FM", name: "Micronesia", lat: 6.9248, lng: 158.1611 },
-    { id: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777 },
-    { id: "PF", name: "French Polynesia", lat: -17.6509, lng: -149.4068 }
-  ];
-
-  const svg = d3.select("#world-map-svg");
-  const width = document.getElementById("map-container").offsetWidth;
-  const projection = d3.geoOrthographic().scale(225).translate([width / 2, 250]).clipAngle(90);
+  // 地図の描画設定（d3）
+  const svg = d3.select("#world-map-svg"), width = document.getElementById("map-container").offsetWidth, height = 500;
+  const projection = d3.geoOrthographic().scale(225).translate([width / 2, height / 2]).clipAngle(90);
   const pathGenerator = d3.geoPath().projection(projection);
   
   svg.append("path").datum({type: "Sphere"}).attr("class", "ocean-sphere").attr("d", pathGenerator);
-  const mapGroup = svg.append("g");
-  const pinGroup = svg.append("g"); 
+  const mapGroup = svg.append("g"), pinGroup = svg.append("g"); 
 
-  svg.call(d3.drag().on("drag", (event) => {
-    const rotate = projection.rotate();
-    projection.rotate([rotate[0] + event.dx * 0.3, rotate[1] - event.dy * 0.3]);
-    updateMapDrawing();
-  }));
+  // 地図の操作処理：ドラッグ・ズーム
+  svg.call(d3.drag().on("drag", (event) => { const rotate = projection.rotate(); const k = 75 / projection.scale(); projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]); updateMapDrawing(); }));
+  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (event) => { projection.scale(225 * event.transform.k); updateMapDrawing(); }));
 
-  function updateMapDrawing() {
-    svg.select(".ocean-sphere").attr("d", pathGenerator);
-    mapGroup.selectAll(".country-polygon").attr("d", pathGenerator);
-    drawSmallCountryPins(); 
-  }
+  function updateMapDrawing() { svg.select(".ocean-sphere").attr("d", pathGenerator); mapGroup.selectAll(".country-polygon").attr("d", pathGenerator); drawSmallCountryPins(); }
 
-  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => {
-    geoJsonMapData = topojson.feature(topology, topology.objects.countries).features;
-    drawBaseMap();
-  });
+  // 地図データの読み込みと初期描画
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => { geoJsonMapData = topojson.feature(topology, topology.objects.countries).features; projection.rotate([-138, -36]); drawBaseMap(); });
 
   function drawBaseMap() {
-    mapGroup.selectAll(".country-polygon").data(geoJsonMapData).enter().append("path")
-      .attr("class", "country-polygon")
-      .attr("id", d => "poly-raw-id-" + String(Number(d.id)).padStart(3, '0'))
-      .attr("d", pathGenerator)
-      .on("click", function(event, d) {
-         if (!currentUsername) return;
-         let numericId = String(Number(d.id)).padStart(3, '0');
-         let alphaId = masterCountries.find(c => c.numericId === numericId)?.id || numericId;
-         openModal(alphaId, countryNameMap[alphaId] || "不明");
-      });
+    mapGroup.selectAll(".country-polygon").data(geoJsonMapData).enter().append("path").attr("class", "country-polygon").attr("id", d => "poly-raw-id-" + String(Number(d.id)).padStart(3, '0')).attr("d", pathGenerator).on("click", function(event, d) { if (!currentUsername) { alert("ロードしてください"); return; } let numericId = String(Number(d.id)).padStart(3, '0'); let alphaId = masterCountries.find(c => c.numericId === numericId)?.id || numericId; openModal(alphaId, countryNameMap[alphaId] || "未登録"); });
     applyDataToUI();
   }
 
+  // 【修正箇所】地球の裏側にあるピンを表示しないよう判定
   function drawSmallCountryPins() {
     pinGroup.selectAll(".small-country-pin").remove();
     pinGroup.selectAll("circle").data(smallCountries).enter().append("circle")
@@ -285,118 +166,38 @@
       .attr("cy", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[1] : 0)
       .attr("r", 1.8)
       .style("fill", d => userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff")
-      .style("opacity", d => (currentFilter === 'all' || (userGlobalData[d.id] && userGlobalData[d.id].status === currentFilter)) ? 1 : 0.1)
-      .on("click", function(event, d) { openModal(d.id, d.name); });
-  }
-
-  function applyFilter(filter) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.innerText.includes(filter === 'all' ? '全部' : (filter === 'resident' ? '在住' : '訪問')));
-    });
-    applyDataToUI();
-  }
-
-  function applyDataToUI() {
-    mapGroup.selectAll(".country-polygon")
-      .style("fill", d => {
-        let id = masterCountries.find(c => c.numericId === String(Number(d.id)).padStart(3, '0'))?.id;
-        let data = userGlobalData[id];
-        if (!data) return "#ffffff";
-        if (currentFilter !== 'all' && data.status !== currentFilter) return "#f7fafc";
-        return data.status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id);
+      // 判定処理：地球の中心点(投影の回転軸の逆)から90度以内のピンのみ表示
+      .style("display", d => {
+         const rotate = projection.rotate();
+         const gdistance = d3.geoDistance([d.lng, d.lat], [-rotate[0], -rotate[1]]);
+         return gdistance > Math.PI / 2 ? "none" : "inline";
       })
-      .style("opacity", d => {
-        let id = masterCountries.find(c => c.numericId === String(Number(d.id)).padStart(3, '0'))?.id;
-        if (currentFilter === 'all' || (userGlobalData[id] && userGlobalData[id].status === currentFilter)) return 1;
-        return 0.2;
-      });
+      .on("click", function(event, d) { event.stopPropagation(); openModal(d.id, d.name); });
+  }
 
-    const listDiv = document.getElementById("data-list");
-    listDiv.innerHTML = "";
-    Object.keys(userGlobalData).forEach(id => {
-      let data = userGlobalData[id];
-      if (currentFilter !== 'all' && data.status !== currentFilter) return;
-      let item = document.createElement("div");
-      item.className = "list-item";
-      item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${id.toLowerCase().replace('us-hi','us')}.png')"></div>
-                        <span class="${data.status === "resident" ? "tag-resident" : "tag-visited"}">${data.status === "resident" ? "在住" : "訪問"}</span>
-                        <span>${countryNameMap[id] || id} (${data.years})</span>`;
-      listDiv.appendChild(item);
-    });
-    drawSmallCountryPins();
+  // ユーザーデータの取得
+  document.getElementById("btn-login").addEventListener("click", function() { currentUsername = document.getElementById("username-input").value.trim(); if (!currentUsername) return; fetchUserData(); });
+  function fetchUserData() { fetch(GAS_API_URL + "?username=" + encodeURIComponent(currentUsername)).then(res => res.json()).then(data => { masterCountries = data.countryMaster || []; countryNameMap = masterCountries.reduce((acc, c) => ({...acc, [c.id]: c.name}), {}); userGlobalData = data.userVisits || {}; applyDataToUI(); }); }
+
+  // データのUI反映
+  function applyDataToUI() {
+    mapGroup.selectAll(".country-polygon").style("fill", d => { let id = masterCountries.find(c => c.numericId === String(Number(d.id)).padStart(3, '0'))?.id; return userGlobalData[id] ? (userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id)) : "#ffffff"; });
+    const listDiv = document.getElementById("data-list"); listDiv.innerHTML = ""; Object.keys(userGlobalData).forEach(id => { let data = userGlobalData[id]; const item = document.createElement("div"); item.className = "list-item"; item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${id.toLowerCase().replace('us-hi','us')}.png')"></div><span class="${data.status === "resident" ? "tag-resident" : "tag-visited"}">${data.status === "resident" ? "在住" : "訪問"}</span><span>${countryNameMap[id] || id} (${data.years})</span>`; listDiv.appendChild(item); });
     buildFooterFlags();
+    updateMapDrawing();
   }
 
-  document.getElementById("btn-login").addEventListener("click", () => {
-    currentUsername = document.getElementById("username-input").value.trim();
-    if (!currentUsername) return;
-    fetch(`${GAS_API_URL}?username=${encodeURIComponent(currentUsername)}`)
-      .then(res => res.json())
-      .then(data => {
-        masterCountries = data.countryMaster || [];
-        countryNameMap = masterCountries.reduce((acc, c) => ({...acc, [c.id]: c.name}), {});
-        userGlobalData = data.userVisits || {};
-        applyDataToUI();
-      });
-  });
+  // モーダルと編集機能
+  function openModal(id, name) { selectedId = id.toUpperCase(); document.getElementById("modal-title").innerText = name; document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().replace('us-hi','us')}.png')`; document.getElementById("status-select").value = userGlobalData[id]?.status || "visited"; document.getElementById("years-input").value = userGlobalData[id]?.years || ""; document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block"; }
+  function closeModal() { document.getElementById("modal").style.display = "none"; document.getElementById("overlay").style.display = "none"; }
+  document.getElementById("btn-save").addEventListener("click", function() { let status = document.getElementById("status-select").value, years = document.getElementById("years-input").value.trim() || "不明"; userGlobalData[selectedId] = { status, years }; applyDataToUI(); closeModal(); fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status, years }) }); });
+  document.getElementById("btn-delete").addEventListener("click", function() { delete userGlobalData[selectedId]; applyDataToUI(); closeModal(); fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "delete", username: currentUsername, regionId: selectedId }) }); });
+  document.getElementById("btn-cancel").addEventListener("click", closeModal);
+  document.getElementById("overlay").addEventListener("click", closeModal);
 
-  function changeSortMode(mode) {
-    currentSortMode = mode;
-    document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav');
-    document.getElementById("sort-btn-alpha").classList.toggle("active", mode === 'alpha');
-    buildFooterFlags();
-  }
-
-  function buildFooterFlags() {
-    const scrollBox = document.getElementById("flag-scroll-box");
-    scrollBox.innerHTML = "";
-    let sorted = [...masterCountries].sort((a, b) => {
-      if (currentSortMode === 'fav') {
-        let sA = userGlobalData[a.id] ? (userGlobalData[a.id].status === 'resident' ? 2 : 1) : 0;
-        let sB = userGlobalData[b.id] ? (userGlobalData[b.id].status === 'resident' ? 2 : 1) : 0;
-        return sB - sA;
-      }
-      return a.id.localeCompare(b.id);
-    });
-
-    sorted.forEach(c => {
-      const card = document.createElement("div");
-      card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : "");
-      card.onclick = () => openModal(c.id, c.name);
-      card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase().replace('us-hi','us')}.png')"></div>
-                        <div class="flag-name">${c.name}</div>`;
-      scrollBox.appendChild(card);
-    });
-  }
-
-  function openModal(id, name) {
-    selectedId = id.toUpperCase();
-    document.getElementById("modal-title").innerText = name;
-    document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().replace('us-hi','us')}.png')`;
-    document.getElementById("status-select").value = userGlobalData[id]?.status || "visited";
-    document.getElementById("years-input").value = userGlobalData[id]?.years || "";
-    document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block";
-  }
-
-  document.getElementById("btn-save").addEventListener("click", () => {
-    let status = document.getElementById("status-select").value;
-    let years = document.getElementById("years-input").value;
-    fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "save", username: currentUsername, regionId: selectedId, status, years }) }).then(() => {
-        userGlobalData[selectedId] = { status, years };
-        applyDataToUI();
-        document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "none";
-    });
-  });
-
-  document.getElementById("btn-delete").addEventListener("click", () => {
-    fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "delete", username: currentUsername, regionId: selectedId }) }).then(() => {
-        delete userGlobalData[selectedId];
-        applyDataToUI();
-        document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "none";
-    });
-  });
-  document.getElementById("btn-cancel").addEventListener("click", () => document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "none");
+  // フッターのフラグリスト生成
+  function changeSortMode(mode) { currentSortMode = mode; document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav'); document.getElementById("sort-btn-alpha").classList.toggle("active", mode === 'alpha'); buildFooterFlags(); }
+  function buildFooterFlags() { const scrollBox = document.getElementById("flag-scroll-box"); scrollBox.innerHTML = ""; let sorted = [...masterCountries].sort((a,b) => currentSortMode === 'fav' ? ((userGlobalData[b.id] ? 1 : 0) - (userGlobalData[a.id] ? 1 : 0)) : a.id.localeCompare(b.id)); sorted.forEach(c => { const card = document.createElement("div"); card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : ""); card.onclick = () => openModal(c.id, c.name); card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase().replace('us-hi','us')}.png')"></div><div class="flag-name">${c.name}</div>`; scrollBox.appendChild(card); }); }
 </script>
 </body>
 </html>
