@@ -9,14 +9,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 
   <style>
-    /* 全体背景スライドショー用設定 */
-    #slideshow-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-    #slideshow-container { width: 100%; height: 100%; }
-    .slide-img { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; transition: opacity 1.5s ease-in-out; }
-    .filter-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.6); pointer-events: none; }
-
-    body { margin: 0; padding: 20px; background-color: transparent; font-family: sans-serif; color: #2d3748; text-align: center; }
-    .container { width: 100%; max-width: 850px; margin: 0 auto; text-align: left; background: rgba(255,255,255,0.85); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    body { margin: 0; padding: 20px; background-color: #f7fafc; font-family: sans-serif; color: #2d3748; text-align: center; }
+    .container { width: 100%; max-width: 850px; margin: 0 auto; text-align: left; }
     h1 { text-align: center; font-size: 22px; color: #1a202c; margin-bottom: 15px; }
     
     .user-box { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -24,96 +18,51 @@
     .user-box button { width: 35%; padding: 10px; font-size: 15px; background: #4299e1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; float: right; }
     .status-msg { margin-top: 8px; font-size: 13px; font-weight: bold; color: #e53e3e; }
 
-    .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
-    .legend-item { display: flex; align-items: center; gap: 5px; }
-
-    .map-wrapper { width: 100%; height: 500px; background: rgba(255,255,255,0.5); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; }
-    .map-wrapper:active { cursor: grabbing; }
-
+    /* 地図エリア */
+    .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
     .country-polygon { fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s; cursor: pointer; }
     .country-polygon:hover { fill: #f8fafc; }
     .country-polygon.visited, .country-polygon.resident { stroke: #ffffff !important; stroke-width: 1.2px !important; }
 
-    .small-country-pin { stroke: #1e293b; stroke-width: 1px; cursor: pointer; transition: r 0.2s, opacity 0.2s; opacity: 0.5; }
-    .small-country-pin.visited, .small-country-pin.resident { opacity: 1; stroke: #ffffff; }
-    .small-country-pin:hover { r: 7.5px !important; opacity: 1 !important; }
-
-    .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
+    /* スライドショーエリア (高さを大きく) */
+    #slideshow-wrapper { margin: 20px 0; border-radius: 12px; overflow: hidden; height: 350px; background: #000; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .slide-img { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; transition: opacity 1.5s ease-in-out; }
 
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 25px; }
-    .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
-    .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
-    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
-    .list-flag { width: 22px; height: 15px; border: 1px solid #cbd5e0; border-radius: 2px; background-size: cover; }
-    
-    .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; text-align: left; border-radius: 0 0 16px 16px; }
-    .footer-flag-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-left: 5px; }
-    .footer-flag-title { color: #f1f5f9; font-size: 14px; font-weight: bold; margin: 0; }
-    
-    .sort-toggle-group { background: #0f172a; padding: 3px; border-radius: 8px; display: inline-flex; border: 1px solid #334155; }
-    .sort-btn { background: transparent; border: none; color: #94a3b8; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
-    .sort-btn.active { background: #3b82f6; color: white; }
-
-    .footer-flag-scroll { display: flex; gap: 15px; overflow-x: auto; padding: 5px; }
-    .flag-card { flex: 0 0 75px; text-align: center; cursor: pointer; }
-    .flag-img { width: 100%; height: 48px; border: 1px solid #475569; border-radius: 6px; background-size: cover; opacity: 0.35; transition: opacity 0.3s; }
-    .flag-card.visited .flag-img { opacity: 1; }
-    
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
-    .modal-content { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 290px; z-index: 1000; }
+    .footer-flag-container { background: #1e293b; border-top: 4px solid #334155; padding: 20px 15px; margin: 30px -20px -20px -20px; border-radius: 0 0 16px 16px; }
   </style>
 </head>
 <body>
-
-<div id="slideshow-bg">
-    <div id="slideshow-container"></div>
-    <div class="filter-overlay"></div>
-</div>
-
 <div class="container">
+
   <h1>🌍 世界旅行足跡マップ</h1>
   
   <div class="user-box">
-    <input type="text" id="username-input" placeholder="お名前を入力（例: Aki）">
+    <input type="text" id="username-input" placeholder="お名前を入力">
     <button id="btn-login">設定ロード</button>
-    <div id="status-display" class="status-msg">⚠️ 最初にお名前を入力して『設定ロード』を押してください</div>
+    <div id="status-display" class="status-msg">⚠️ ロードしてください</div>
   </div>
 
   <div class="map-wrapper" id="map-container">
     <svg id="world-map-svg" width="100%" height="100%"></svg>
   </div>
 
+  <div id="slideshow-wrapper">
+      <div id="slideshow-container"></div>
+  </div>
+
   <div class="list-section">
-    <div class="list-title">登録済みの国・地域一覧</div>
-    <div id="data-list" class="list-grid"></div>
+    <div id="data-list"></div>
   </div>
 
   <div class="footer-flag-container">
-    <div class="footer-flag-title-row">
-      <p class="footer-flag-title">🚩 国旗コレクション</p>
-      <div class="sort-toggle-group">
-        <button class="sort-btn active" id="sort-btn-fav" onclick="changeSortMode('fav')">★ お気に入り順</button>
-        <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 コード順</button>
-      </div>
-    </div>
-    <div class="footer-flag-scroll" id="flag-scroll-box"></div>
+    <div id="flag-scroll-box"></div>
   </div>
 </div>
 
-<div class="modal-overlay" id="overlay"></div>
-<div class="modal-content" id="modal">
-  <h3 id="modal-title">国名</h3>
-  <div style="width:80px;height:52px;margin:10px auto;border:1px solid #cbd5e0;border-radius:4px;background-size:cover;" id="modal-flag-img"></div>
-  <select id="status-select"><option value="visited">訪問済み</option><option value="resident">在住</option></select>
-  <input type="text" id="years-input" placeholder="滞在年">
-  <button id="btn-save">保存</button>
-  <button id="btn-delete">削除</button>
-  <button id="btn-cancel">キャンセル</button>
-</div>
-
 <script>
-  // スライドショーの初期化
+  // スライドショー処理
   (function() {
       const images = ["01_peru_machu_picchu.png", "02_japan_kyoto.png", "03_morocco_sahara.png", "04_iceland_aurora.png", "05_italy_venice.png", "06_india_taj_mahal.png", "07_greece_santorini.png", "08_egypt_pyramids.png", "09_peru_cusco_market.png", "10_thailand_floating_market.png", "11_france_paris.png", "12_turkey_cappadocia.png", "13_australia_sydney.png", "14_brazil_rio.png", "15_vietnam_halong_bay.png", "16_kenya_safari.png", "17_czech_prague.png", "18_peru_rainbow_mountain.png", "19_china_great_wall.png", "20_mexico_chichen_itza.png", "21_switzerland_zermatt.png", "22_argentina_iguazu.png", "23_jordan_petra.png", "24_usa_nyc.png", "25_nepal_everest.png", "26_spain_barcelona.png", "27_portugal_lisbon.png", "28_cuba_havana.png", "29_indonesia_bali.png", "30_new_zealand_milford_sound.png"];
       const container = document.getElementById('slideshow-container');
@@ -134,22 +83,16 @@
       }, 5000);
   })();
 
-  // 以下、既存ロジック
+  // 以下、既存ロジックは以前のまま保持
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyj4U0gGbquL5LD-UNVwKzcdW-I734t-rd9QvsE9XwSGkA8CkknkRZ9lLNX5yvbxm-Qzg/exec";
-  let masterCountries = [], currentUsername = "", userGlobalData = {}, selectedId = null, countryNameMap = {}, geoJsonMapData = [];
-  const svg = d3.select("#world-map-svg"), projection = d3.geoOrthographic().scale(225).translate([425, 250]).clipAngle(90);
+  const svg = d3.select("#world-map-svg");
+  const projection = d3.geoOrthographic().scale(225).translate([425, 250]).clipAngle(90);
   const pathGenerator = d3.geoPath().projection(projection);
   
   svg.append("path").datum({type: "Sphere"}).attr("class", "ocean-sphere").attr("d", pathGenerator);
-  const mapGroup = svg.append("g");
-  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(t => { geoJsonMapData = topojson.feature(t, t.objects.countries).features; drawBaseMap(); });
-
-  function drawBaseMap() {
-    mapGroup.selectAll("path").data(geoJsonMapData).enter().append("path").attr("class", "country-polygon").attr("d", pathGenerator).on("click", (e, d) => openModal(String(Number(d.id)), "国名"));
-  }
-  
-  function openModal(id, name) { document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block"; }
-  function closeModal() { document.getElementById("modal").style.display = "none"; document.getElementById("overlay").style.display = "none"; }
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(t => { 
+      svg.append("g").selectAll("path").data(topojson.feature(t, t.objects.countries).features).enter().append("path").attr("class", "country-polygon").attr("d", pathGenerator);
+  });
 </script>
 </body>
 </html>
