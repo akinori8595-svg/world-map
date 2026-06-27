@@ -41,7 +41,7 @@
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 25px; }
     .list-title { font-size: 16px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; margin-bottom: 10px; }
     .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
-    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+    .list-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; cursor: pointer; }
     .list-flag { width: 22px; height: 15px; border: 1px solid #cbd5e0; border-radius: 2px; background-size: cover; background-position: center; }
     
     .tag-resident { background: #3b82f6; color: white; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
@@ -117,7 +117,9 @@
 
   <div class="list-section">
     <div class="list-title">登録済みの国・地域一覧</div>
-    <div id="data-list" class="list-grid"></div>
+    <div id="data-list" class="list-grid">
+      <div style="color:#a0aec0; font-size:12px;">ロードするとここに一覧が表示されます。</div>
+    </div>
     <div id="pagination-controls" class="pagination"></div>
   </div>
 
@@ -129,7 +131,9 @@
         <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 国名コード順</button>
       </div>
     </div>
-    <div class="footer-flag-scroll" id="flag-scroll-box"></div>
+    <div class="footer-flag-scroll" id="flag-scroll-box">
+      <div style="color: #94a3b8; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
+    </div>
   </div>
 
 </div>
@@ -180,10 +184,8 @@
       let currentIndex = 0;
       images.forEach((img, index) => {
           const div = document.createElement('div');
-          div.style.position = 'absolute'; div.style.width = '100%'; div.style.height = '100%';
+          div.className = 'slide-img';
           div.style.backgroundImage = `url('${repoBase}${img}')`;
-          div.style.backgroundSize = 'cover'; div.style.backgroundPosition = 'center';
-          div.style.transition = 'opacity 1.5s ease-in-out';
           div.style.opacity = index === 0 ? '1' : '0';
           container.appendChild(div);
       });
@@ -230,7 +232,7 @@
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     const pageKeys = keys.slice(start, end);
-    const listDiv = document.getElementById("data-list"); listDiv.innerHTML = ""; pageKeys.forEach(id => { const item = document.createElement("div"); item.className = "list-item"; let flag = id.toLowerCase().replace('us-hi','us'); item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${flag}.png')"></div><span class="${userGlobalData[id].status === "resident" ? "tag-resident" : "tag-visited"}">${userGlobalData[id].status === "resident" ? "在住" : "訪問"}</span><span>${countryNameMap[id] || id} (${userGlobalData[id].years})</span>`; listDiv.appendChild(item); });
+    const listDiv = document.getElementById("data-list"); listDiv.innerHTML = ""; pageKeys.forEach(id => { const item = document.createElement("div"); item.className = "list-item"; item.onclick = () => openModal(id, countryNameMap[id] || id); let flag = id.toLowerCase().replace('us-hi','us'); item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${flag}.png')"></div><span class="${userGlobalData[id].status === "resident" ? "tag-resident" : "tag-visited"}">${userGlobalData[id].status === "resident" ? "在住" : "訪問"}</span><span>${countryNameMap[id] || id} (${userGlobalData[id].years})</span>`; listDiv.appendChild(item); });
     renderPagination(keys.length);
   }
 
