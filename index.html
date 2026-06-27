@@ -81,6 +81,12 @@
     .btn-primary { background: #38a169; color: white; }
     .btn-danger { background: #fff; color: #e53e3e; border: 1px solid #fed7d7; }
     .btn-secondary { background: #edf2f7; color: #4a5568; }
+
+    #slideshow-wrapper { margin: 20px 0; border-radius: 12px; overflow: hidden; height: 350px; background: #000; position: relative; }
+    .slide-img { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; transition: opacity 1.5s ease-in-out; }
+    
+    .pagination { text-align: center; margin-top: 10px; padding: 10px; }
+    .page-btn { padding: 5px 15px; cursor: pointer; background: #eee; border: none; border-radius: 4px; margin: 0 5px; }
   </style>
 </head>
 <body>
@@ -105,15 +111,14 @@
     <svg id="world-map-svg" width="100%" height="100%"></svg>
   </div>
 
-  <div class="list-section">
-    <div class="list-title">登録済みの国・地域一覧</div>
-    <div id="data-list" class="list-grid">
-      <div style="color:#a0aec0; font-size:12px;">ロードするとここに一覧が表示されます。</div>
-    </div>
+  <div id="slideshow-wrapper">
+      <div id="slideshow-container"></div>
   </div>
 
-  <div id="slideshow-wrapper" style="margin: 20px 0; border-radius: 12px; overflow: hidden; height: 200px; background: #000; position: relative;">
-      <div id="slideshow-container" style="position: relative; width: 100%; height: 100%;"></div>
+  <div class="list-section">
+    <div class="list-title">登録済みの国・地域一覧</div>
+    <div id="data-list" class="list-grid"></div>
+    <div id="pagination-controls" class="pagination"></div>
   </div>
 
   <div class="footer-flag-container">
@@ -124,9 +129,7 @@
         <button class="sort-btn" id="sort-btn-alpha" onclick="changeSortMode('alpha')">🔤 国名コード順</button>
       </div>
     </div>
-    <div class="footer-flag-scroll" id="flag-scroll-box">
-      <div style="color: #94a3b8; font-size: 13px; padding: 10px;">ユーザー設定をロードすると国旗が並びます...</div>
-    </div>
+    <div class="footer-flag-scroll" id="flag-scroll-box"></div>
   </div>
 
 </div>
@@ -150,8 +153,9 @@
 <script>
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyj4U0gGbquL5LD-UNVwKzcdW-I734t-rd9QvsE9XwSGkA8CkknkRZ9lLNX5yvbxm-Qzg/exec";
   let masterCountries = [], currentUsername = "", userGlobalData = {}, selectedId = null, countryNameMap = {}, geoJsonMapData = [], currentSortMode = 'fav'; 
+  let currentPage = 1;
+  const itemsPerPage = 10;
 
-  // 200色のパステル生成ロジック
   function generatePastelColors(count) {
      let colors = [];
      for (let i = 0; i < count; i++) {
@@ -169,7 +173,6 @@
      return countryColors[index];
   }
 
-  // スライドショーの初期化
   (function() {
       const images = ["01_peru_machu_picchu.png", "02_japan_kyoto.png", "03_morocco_sahara.png", "04_iceland_aurora.png", "05_italy_venice.png", "06_india_taj_mahal.png", "07_greece_santorini.png", "08_egypt_pyramids.png", "09_peru_cusco_market.png", "10_thailand_floating_market.png", "11_france_paris.png", "12_turkey_cappadocia.png", "13_australia_sydney.png", "14_brazil_rio.png", "15_vietnam_halong_bay.png", "16_kenya_safari.png", "17_czech_prague.png", "18_peru_rainbow_mountain.png", "19_china_great_wall.png", "20_mexico_chichen_itza.png", "21_switzerland_zermatt.png", "22_argentina_iguazu.png", "23_jordan_petra.png", "24_usa_nyc.png", "25_nepal_everest.png", "26_spain_barcelona.png", "27_portugal_lisbon.png", "28_cuba_havana.png", "29_indonesia_bali.png", "30_new_zealand_milford_sound.png"];
       const container = document.getElementById('slideshow-container');
@@ -220,7 +223,24 @@
 
   document.getElementById("btn-login").addEventListener("click", function() { currentUsername = document.getElementById("username-input").value.trim(); if (!currentUsername) return; fetchUserData(); });
   function fetchUserData() { fetch(GAS_API_URL + "?username=" + encodeURIComponent(currentUsername)).then(res => res.json()).then(data => { masterCountries = data.countryMaster || []; countryNameMap = masterCountries.reduce((acc, c) => ({...acc, [c.id]: c.name}), {}); userGlobalData = data.userVisits || {}; buildFooterFlags(); applyDataToUI(); }); }
-  function applyDataToUI() { mapGroup.selectAll(".country-polygon").style("fill", d => { let numericId = String(Number(d.id)).padStart(3, '0'); let master = masterCountries.find(c => c.numericId === numericId); let id = master ? master.id : numericId; return userGlobalData[id] ? (userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id)) : "#ffffff"; }); const listDiv = document.getElementById("data-list"); listDiv.innerHTML = ""; Object.keys(userGlobalData).forEach(id => { const item = document.createElement("div"); item.className = "list-item"; let flag = id.toLowerCase().replace('us-hi','us'); item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${flag}.png')"></div><span class="${userGlobalData[id].status === "resident" ? "tag-resident" : "tag-visited"}">${userGlobalData[id].status === "resident" ? "在住" : "訪問"}</span><span>${countryNameMap[id] || id} (${userGlobalData[id].years})</span>`; listDiv.appendChild(item); }); }
+
+  function applyDataToUI() {
+    mapGroup.selectAll(".country-polygon").style("fill", d => { let numericId = String(Number(d.id)).padStart(3, '0'); let master = masterCountries.find(c => c.numericId === numericId); let id = master ? master.id : numericId; return userGlobalData[id] ? (userGlobalData[id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(id)) : "#ffffff"; });
+    const keys = Object.keys(userGlobalData);
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageKeys = keys.slice(start, end);
+    const listDiv = document.getElementById("data-list"); listDiv.innerHTML = ""; pageKeys.forEach(id => { const item = document.createElement("div"); item.className = "list-item"; let flag = id.toLowerCase().replace('us-hi','us'); item.innerHTML = `<div class="list-flag" style="background-image:url('https://flagcdn.com/w80/${flag}.png')"></div><span class="${userGlobalData[id].status === "resident" ? "tag-resident" : "tag-visited"}">${userGlobalData[id].status === "resident" ? "在住" : "訪問"}</span><span>${countryNameMap[id] || id} (${userGlobalData[id].years})</span>`; listDiv.appendChild(item); });
+    renderPagination(keys.length);
+  }
+
+  function renderPagination(total) {
+      const controls = document.getElementById("pagination-controls"); controls.innerHTML = "";
+      const pages = Math.ceil(total / itemsPerPage);
+      if (pages <= 1) return;
+      for (let i = 1; i <= pages; i++) { const btn = document.createElement("button"); btn.innerText = i; btn.className = "page-btn"; btn.onclick = () => { currentPage = i; applyDataToUI(); }; controls.appendChild(btn); }
+  }
+
   function changeSortMode(mode) { currentSortMode = mode; document.getElementById("sort-btn-fav").classList.toggle("active", mode === 'fav'); document.getElementById("sort-btn-alpha").classList.toggle("active", mode === 'alpha'); buildFooterFlags(); }
   function buildFooterFlags() { const scrollBox = document.getElementById("flag-scroll-box"); scrollBox.innerHTML = ""; let sorted = [...masterCountries].sort((a,b) => currentSortMode === 'fav' ? ((userGlobalData[b.id]?1:0) - (userGlobalData[a.id]?1:0)) : a.id.localeCompare(b.id)); sorted.forEach(c => { const card = document.createElement("div"); card.className = "flag-card" + (userGlobalData[c.id] ? " " + userGlobalData[c.id].status : ""); card.onclick = () => openModal(c.id, c.name); card.innerHTML = `<div class="flag-img" style="background-image:url('https://flagcdn.com/w80/${c.id.toLowerCase().replace('us-hi','us')}.png')"></div><div class="flag-name">${c.name}</div>`; scrollBox.appendChild(card); }); }
   function openModal(id, name) { selectedId = id.toUpperCase(); document.getElementById("modal-title").innerText = name; document.getElementById("modal-flag-img").style.backgroundImage = `url('https://flagcdn.com/w160/${id.toLowerCase().replace('us-hi','us')}.png')`; document.getElementById("status-select").value = userGlobalData[id]?.status || "visited"; document.getElementById("years-input").value = userGlobalData[id]?.years || ""; document.getElementById("modal").style.display = document.getElementById("overlay").style.display = "block"; }
