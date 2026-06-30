@@ -21,7 +21,7 @@
     .legend { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; font-weight: bold; font-size: 12px; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
 
-    .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 4px 12px rgba(0,0,0,0.05); }
+    .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 4px 12px rgba(0,0,0,0.05); touch-action: none; }
     .map-wrapper:active { cursor: grabbing; }
 
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
@@ -197,17 +197,39 @@
       }, 5000);
   })();
 
-  const smallCountries = [{ id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 }, { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 }, { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 }, { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 }, { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 }, { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 }, { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 }, { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 }, { id: "GU", name: "Guam", lat: 13.4443, lng: 144.7937 }, { id: "MP", name: "Saipan", lat: 15.1772, lng: 145.7514 }, { id: "FM", name: "Micronesia", lat: 6.9248, lng: 158.1611 }, { id: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777 }, { id: "PF", name: "French Polynesia", lat: -17.6509, lng: -149.4068 }];
+  // 🌍 パラオを含む島嶼ピンの定義
+  const smallCountries = [
+    { id: "SG", name: "Singapore", lat: 1.3521, lng: 103.8198 }, { id: "HK", name: "Hong Kong", lat: 22.3193, lng: 114.1694 },
+    { id: "VA", name: "Vatican City", lat: 41.9029, lng: 12.4534 }, { id: "MC", name: "Monaco", lat: 43.7384, lng: 7.4246 },
+    { id: "AD", name: "Andorra", lat: 42.5063, lng: 1.5218 }, { id: "MT", name: "Malta", lat: 35.9375, lng: 14.3754 },
+    { id: "BH", name: "Bahrain", lat: 26.0667, lng: 50.5577 }, { id: "MV", name: "Maldives", lat: 3.2028, lng: 73.2207 },
+    { id: "GU", name: "Guam", lat: 13.4443, lng: 144.7937 }, { id: "MP", name: "Saipan", lat: 15.1772, lng: 145.7514 },
+    { id: "FM", name: "Micronesia", lat: 6.9248, lng: 158.1611 }, { id: "CK", name: "Cook Islands", lat: -21.2367, lng: -159.7777 },
+    { id: "PF", name: "French Polynesia", lat: -17.6509, lng: -149.4068 }, { id: "PW", name: "Palau", lat: 7.465, lng: 134.582 }
+  ];
+  
   const svg = d3.select("#world-map-svg"), width = document.getElementById("map-container").offsetWidth, height = 500;
   const projection = d3.geoOrthographic().scale(225).translate([width / 2, height / 2]).clipAngle(90);
   const pathGenerator = d3.geoPath().projection(projection);
+  
   svg.append("path").datum({type: "Sphere"}).attr("class", "ocean-sphere").attr("d", pathGenerator);
   const mapGroup = svg.append("g"), pinGroup = svg.append("g"); 
 
-  svg.call(d3.drag().on("drag", (event) => { const rotate = projection.rotate(); const k = 75 / projection.scale(); projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]); updateMapDrawing(); }));
-  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (event) => { projection.scale(225 * event.transform.k); updateMapDrawing(); }));
+  // タッチイベントの干渉を防ぐ改善
+  const dragBehavior = d3.drag().on("drag", (event) => {
+    const rotate = projection.rotate();
+    const k = 75 / projection.scale();
+    projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]);
+    updateMapDrawing();
+  });
+  
+  svg.call(dragBehavior).on("touchstart", (e) => e.preventDefault());
+  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (e) => {
+    projection.scale(225 * e.transform.k);
+    updateMapDrawing();
+  }));
 
-  function updateMapDrawing() { svg.select(".ocean-sphere").attr("d", pathGenerator); mapGroup.selectAll(".country-polygon").attr("d", pathGenerator); pinGroup.selectAll(".small-country-pin").attr("cx", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[0] : 0).attr("cy", d => projection([d.lng, d.lat]) ? projection([d.lng, d.lat])[1] : 0).style("display", d => d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]) > Math.PI / 2 ? "none" : "inline"); }
+  function updateMapDrawing() { svg.select(".ocean-sphere").attr("d", pathGenerator); mapGroup.selectAll(".country-polygon").attr("d", pathGenerator); pinGroup.selectAll(".pin-group").attr("transform", d => { const pos = projection([d.lng, d.lat]); return pos ? `translate(${pos[0]},${pos[1]})` : "translate(-100,-100)"; }).style("display", d => d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]) > Math.PI / 2 ? "none" : "block"); }
 
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(topology => { geoJsonMapData = topojson.feature(topology, topology.objects.countries).features; projection.rotate([-138, -36]); drawBaseMap(); });
 
@@ -217,9 +239,14 @@
     drawSmallCountryPins(); updateMapDrawing();
   }
 
+  // 小さなピンの改善：透明なヒットエリアを追加
   function drawSmallCountryPins() {
-    pinGroup.selectAll(".small-country-pin").remove();
-    pinGroup.selectAll("circle").data(smallCountries).enter().append("circle").attr("class", d => "small-country-pin" + (userGlobalData[d.id] ? " " + userGlobalData[d.id].status : "")).attr("r", 1.8).style("fill", d => userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff").on("click", function(event, d) { event.stopPropagation(); openModal(d.id, countryNameMap[d.id] || d.name); });
+    pinGroup.selectAll(".pin-group").remove();
+    smallCountries.forEach(d => {
+        const g = pinGroup.append("g").attr("class", "pin-group");
+        g.append("circle").attr("class", "small-country-pin" + (userGlobalData[d.id] ? " " + userGlobalData[d.id].status : "")).attr("r", 1.8).style("fill", userGlobalData[d.id] ? (userGlobalData[d.id].status === 'resident' ? "#3b82f6" : getPastelColorForCountry(d.id)) : "#ffffff");
+        g.append("circle").attr("r", 15).style("fill", "transparent").style("cursor", "pointer").on("click", (e) => { e.stopPropagation(); openModal(d.id, countryNameMap[d.id] || d.name); });
+    });
     updateMapDrawing();
   }
 
