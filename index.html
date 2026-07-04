@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>世界旅行足跡マップ (パステルマルチカラー＆オセアニア島嶼完全対応版)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -32,11 +32,9 @@
     
     .country-polygon.visited, .country-polygon.resident { stroke: #ffffff !important; stroke-width: 1.2px !important; stroke-linejoin: round; }
 
-    .small-country-pin { stroke: #1e293b; stroke-width: 1px; cursor: pointer; transition: r 0.2s ease-out, stroke-width 0.2s ease-out, opacity 0.2s; opacity: 0.5; }
-    .small-country-pin.visited, .small-country-pin.resident { opacity: 1; stroke: #ffffff; stroke-width: 1.2px; }
+    /* ピンの視覚用ドット */
+    .small-country-pin { pointer-events: none; }
     
-    .small-country-pin:hover { r: 7.5px !important; stroke-width: 2px !important; opacity: 1 !important; }
-
     .map-guide { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,0.75); color: white; font-size: 11px; padding: 6px 12px; border-radius: 20px; pointer-events: none; z-index: 5; }
 
     .list-section { background: white; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 25px; }
@@ -206,11 +204,11 @@
   svg.append("path").datum({type: "Sphere"}).attr("class", "ocean-sphere").attr("d", pathGenerator);
   const mapGroup = svg.append("g"), pinGroup = svg.append("g"); 
 
-  // タッチイベントの干渉を防ぐ改善
-  svg.on("touchstart", (e) => e.preventDefault());
+  // モバイル対応：拡大縮小・回転の挙動制御
+  svg.on("touchstart", (e) => { if (e.touches.length > 1) e.preventDefault(); });
   
   svg.call(d3.drag().on("drag", (event) => { const rotate = projection.rotate(); const k = 75 / projection.scale(); projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]); updateMapDrawing(); }));
-  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (e) => { projection.scale(225 * e.transform.k); updateMapDrawing(); }));
+  svg.call(d3.zoom().scaleExtent([0.8, 8]).on("zoom", (e) => { if(e.sourceEvent) e.sourceEvent.preventDefault(); projection.scale(225 * e.transform.k); updateMapDrawing(); }));
 
   function updateMapDrawing() { svg.select(".ocean-sphere").attr("d", pathGenerator); mapGroup.selectAll(".country-polygon").attr("d", pathGenerator); pinGroup.selectAll(".pin-group").attr("transform", d => { const pos = projection([d.lng, d.lat]); return pos ? `translate(${pos[0]},${pos[1]})` : "translate(-100,-100)"; }).style("display", d => d3.geoDistance([d.lng, d.lat], [-projection.rotate()[0], -projection.rotate()[1]]) > Math.PI / 2 ? "none" : "block"); }
 
