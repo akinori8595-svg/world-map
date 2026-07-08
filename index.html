@@ -27,6 +27,10 @@
     .map-wrapper { width: 100%; height: 500px; background: radial-gradient(circle, #e0f2fe 0%, #bae6fd 40%, #7dd3fc 70%, #f1f5f9 100%); border: 1px solid #bae6fd; border-radius: 16px; position: relative; overflow: hidden; cursor: grab; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 4px 12px rgba(0,0,0,0.05); }
     .map-wrapper:active { cursor: grabbing; }
 
+    /* 【追加】拡大縮小ボタン */
+    .zoom-controls { position: absolute; bottom: 10px; right: 10px; z-index: 10; display: flex; flex-direction: column; gap: 5px; }
+    .zoom-btn { width: 40px; height: 40px; background: rgba(255,255,255,0.9); border: 1px solid #cbd5e0; border-radius: 50%; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
     .ocean-sphere { fill: #bae6fd; stroke: #7dd3fc; stroke-width: 1px; }
 
     .country-polygon { fill: #ffffff; stroke: #94a3b8; stroke-width: 0.6px; transition: fill 0.2s; cursor: pointer; }
@@ -105,6 +109,10 @@
 
   <div class="map-wrapper" id="map-container">
     <div class="map-guide">🖱️ ドラッグで地球を回転 / ホイールで拡大縮小</div>
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="zoomMap(1.2)">＋</button>
+      <button class="zoom-btn" onclick="zoomMap(0.8)">ー</button>
+    </div>
     <svg id="world-map-svg" width="100%" height="100%"></svg>
   </div>
 
@@ -188,6 +196,12 @@
   svg.append("path").datum({type: "Sphere"}).attr("class", "ocean-sphere").attr("d", pathGenerator);
   const mapGroup = svg.append("g");
   const pinGroup = svg.append("g"); 
+
+  // 拡大縮小実行
+  function zoomMap(factor) {
+      projection.scale(projection.scale() * factor);
+      updateMapDrawing();
+  }
 
   svg.call(d3.drag().on("drag", (event) => {
     const rotate = projection.rotate();
